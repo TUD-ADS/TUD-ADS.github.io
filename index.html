@@ -1,1 +1,2745 @@
-Hello World
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <title>i8080 Assembly Editor</title>
+    <link rel="shortcut icon" type="image/ico" href="https://tu-dresden.de/favicon.ico">
+
+    <style>
+
+
+        body {
+            background: #444;
+            margin: 0;
+            font-family: "Noto Sans", "sans-serif";
+            color: white;
+            padding-bottom: 10em;
+        }
+
+        header {
+            background-image: linear-gradient(to bottom, #0072b8, #002557);
+            /*background: #002557;*/
+            box-shadow: 0 2px 0 0 #222;
+            min-height: 48px;
+
+            padding-top: 0.25em;
+            margin-bottom: 2em;
+        }
+
+        h1 {
+            display: inline-block;
+            margin: 0;
+            font-size: 200%;
+        }
+
+        h2 {
+            margin: 0 1em 0;
+        }
+
+        h4 {
+            margin: 0 0 0.5em;
+        }
+
+        table {
+            margin: 0;
+        }
+
+        hr {
+            margin: 0 0 2em;
+            border-color: #aaa;
+        }
+
+        pre {
+            margin: 0;
+        }
+
+        td {
+            padding: 0;
+        }
+
+        .gutter-head {
+            color: gray;
+        }
+
+        .gutter-content {
+            padding: 0.25em 0.25em 0;
+            text-align: right;
+            color: gray;
+
+            overflow: hidden;
+        }
+
+        .tu-logo {
+            margin: 0 1em;
+            height: 2em;
+            width: auto;
+            display: inline-block;
+        }
+
+        /*noinspection CssUnusedSymbol*/
+        .line-empty {
+            color: gray;
+        }
+
+        /*noinspection CssUnusedSymbol*/
+        .line-error {
+            color: lightcoral;
+        }
+
+        /*noinspection CssUnusedSymbol*/
+        .line-tokenized {
+            color: palegoldenrod;
+        }
+
+        /*noinspection CssUnusedSymbol*/
+        .line-parsed {
+            color: lightgreen;
+        }
+
+        /*noinspection CssUnusedSymbol*/
+        .line-pseudo {
+            color: #cca7ff;
+        }
+
+        .cpu-data-table {
+            border-collapse: collapse;
+            margin-left: 2em;
+            margin-bottom: 1em;
+            font-family: monospace;
+            font-size: 11pt;
+        }
+
+        #errlog {
+            text-align: left;
+        }
+
+        #content {
+            /*margin-left: 2em;*/
+            margin-right: 2em;
+        }
+
+        #edit-row {
+            border: 1px solid gray;
+            border-left: none;
+        }
+
+        #edit-table {
+            border-collapse: collapse;
+
+            font-family: monospace;
+            font-size: 11pt;
+            margin-bottom: 1em;
+        }
+
+        #gutter-container {
+            padding-left: 1em;
+
+            background: #404040;
+            vertical-align: top;
+        }
+
+        #hex-container {
+            background: #393939;
+            border-right: 1px solid gray;
+            border-left: 1px solid gray;
+            vertical-align: top;
+        }
+
+        #bin-container {
+            background: #393939;
+            border-right: 1px solid gray;
+            border-left: 1px solid gray;
+            vertical-align: top;
+        }
+
+        #adr-container {
+            background: #393939;
+            border-right: 1px solid gray;
+            border-left: 1px solid gray;
+            vertical-align: top;
+        }
+
+        #deb-container {
+            background: #393939;
+            border-right: 1px solid gray;
+            border-left: 1px solid gray;
+            vertical-align: top;
+        }
+
+        #editor-container {
+            background: #333;
+            overflow: hidden;
+            padding: 0;
+            /*border: 1px solid gray;
+            border-left: none;*/
+        }
+
+        #editor:focus {
+            outline: none;
+        }
+
+        #hex {
+            color: #AAA;
+        }
+
+        #bin {
+            color: #AAA;
+        }
+
+        #adr {
+            color: #AAA;
+        }
+
+        #editor {
+            padding-left: 0.5em;
+            padding-right: 17px;
+            padding-top: 0.25em;
+
+            background: none;
+            width: calc(100% - 0.5em);
+            resize: none;
+            min-height: 32em;
+            border: none;
+
+            box-sizing: padding-box;
+
+            scroll-padding: 0;
+            overflow-x: hidden;
+            white-space: pre;
+
+            font-size: inherit;
+            font-weight: bold;
+            vertical-align: top;
+            color: #EEE;
+        }
+    </style>
+
+    <!--suppress CssUnusedSymbol -->
+    <style id="style-emu-controls">
+        input[type=range] {
+            width: 15em;
+            display: inline-block;
+            margin-top: 0;
+            vertical-align: center;
+            height: 1.5em;
+        }
+
+        label {
+            display: inline-block;
+            vertical-align: middle;
+            height: 1.5em;
+            box-sizing: padding-box;
+            padding-top: 0.5em;
+        }
+
+        button {
+            margin: 0 1em 0.5em 0;
+            padding: 0.5em;
+
+            background: #444;
+            border: 2px solid #777;
+            min-width: 5em;
+            color: white;
+            display: initial;
+
+            cursor: pointer;
+
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        button:focus {
+            outline: 0;
+        }
+
+        button:disabled {
+            border-color: #333;
+            color: gray;
+
+            cursor: unset;
+        }
+
+        .button-load {
+            border-color: #318ebd;
+        }
+
+        .button-start {
+            border-color: #60bd31;
+        }
+
+        .button-stop {
+            border-color: #bd3131;
+        }
+
+        .button-reboot {
+            border-color: #bd3131;
+        }
+
+        .button-reset {
+            border-color: #bd6b31;
+        }
+
+        .button-step {
+            border-color: #bdbdbd;
+        }
+
+        .button-load:hover:enabled {
+            background-color: #3d5866;
+        }
+
+        .button-start:hover:enabled {
+            background-color: #4b663d;
+        }
+
+        .button-stop:hover:enabled {
+            background-color: #663d3d;
+        }
+
+        .button-reboot:hover:enabled {
+            background-color: #663d3d;
+        }
+
+        .button-reset:hover:enabled {
+            background-color: #664e3d;
+        }
+
+        .button-step:hover:enabled {
+            background-color: #666666;
+        }
+
+        .button-load:disabled {
+            border-color: inherit;
+        }
+
+        .button-start:disabled {
+            border-color: inherit;
+        }
+
+        .button-reboot:disabled {
+            border-color: inherit;
+        }
+
+        .button-reset:disabled {
+            border-color: inherit;
+        }
+
+        .button-step:disabled {
+            border-color: inherit;
+        }
+
+        .err {
+            background-color: #663d3d;
+        }
+    </style>
+
+    <!--suppress CssUnusedSymbol -->
+    <style id="style-memory">
+        .mem-head {
+            border: 1px solid gray;
+            color: #aaa;
+            background: #444;
+            padding: 0.15em 0.25em;
+            min-width: 3em;
+        }
+
+        .spacing-cell {
+            min-width: 3em;
+            padding: 0.15em 0.25em;
+        }
+
+        .data-cell {
+            border: 1px solid gray;
+            color: #ddd;
+            background: #333;
+            padding: 0.15em 0.25em;
+            min-width: 3em;
+            text-align: center;
+        }
+
+        .inspect-cell {
+            border: 1px solid gray;
+            color: #ccc;
+            background: #333;
+            padding: 0.15em 0.5em;
+            height: 1em;
+            min-width: 6em;
+            text-align: left;
+        }
+
+        .mem-cell {
+            border: 1px solid gray;
+            color: #ccc;
+            background: #333;
+            padding: 0.15em 0.25em;
+            min-width: 3em;
+            text-align: center;
+        }
+
+        .pc {
+            outline: 3px solid #bd31bd;
+            outline-offset: -2px;
+        }
+
+        .sp {
+            outline: 3px solid #31bdbd;
+            outline-offset: -2px;
+        }
+
+        .mem-cell:hover {
+            background: #999999;
+            color: white;
+        }
+
+        .mem-cell-stack {
+            background: #364d4d;
+        }
+
+        .mem-cell-stack:hover {
+            background: #60bfbf;
+        }
+
+        .mem-cell-heap {
+            background: #4d4b36;
+        }
+
+        .mem-cell-heap:hover {
+            background: #bfb460;
+            color: black;
+        }
+
+        .mem-cell-program {
+            background: #4d364d;
+        }
+
+        .mem-cell-program:hover {
+            background: #bf60bf;
+        }
+    </style>
+
+</head>
+<body>
+<header>
+    <!--suppress LongLine -->
+    <img id="tu-logo" class="tu-logo" alt="TU-Dresden"
+         src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAxNC4wLjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDQzMzYzKSAgLS0+DQo8IURPQ1RZUEUgc3ZnIFBVQkxJQyAiLS8vVzNDLy9EVEQgU1ZHIDEuMC8vRU4iICJodHRwOi8vd3d3LnczLm9yZy9UUi8yMDAxL1JFQy1TVkctMjAwMTA5MDQvRFREL3N2ZzEwLmR0ZCI+DQo8c3ZnIHZlcnNpb249IjEuMCIgaWQ9IkViZW5lXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4Ig0KCSB3aWR0aD0iMjU1LjA5NnB4IiBoZWlnaHQ9IjczLjk0M3B4IiB2aWV3Qm94PSIwIDAgMjU1LjA5NiA3My45NDMiIGVuYWJsZS1iYWNrZ3JvdW5kPSJuZXcgMCAwIDI1NS4wOTYgNzMuOTQzIg0KCSB4bWw6c3BhY2U9InByZXNlcnZlIj4NCjxnPg0KCTxwb2x5Z29uIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBmaWxsPSIjRkZGRkZGIiBwb2ludHM9IjIyNS45MzYsMjMuMzI4IDIyNS45MzYsMjYuODU2IDIyOS4zOTIsMjYuODU2IA0KCQkyMjkuMzkyLDIzLjMyOCAyMjUuOTM2LDIzLjMyOCAJIi8+DQoJPHBvbHlnb24gZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGZpbGw9IiNGRkZGRkYiIHBvaW50cz0iMjM1LjM2OCwyMy4zMjggMjM1LjM2OCwyNi44NTYgMjM4LjgyNCwyNi44NTYgDQoJCTIzOC44MjQsMjMuMzI4IDIzNS4zNjgsMjMuMzI4IAkiLz4NCgk8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZmlsbD0iI0ZGRkZGRiIgZD0iTTE4Mi4zMDQsNDcuMDg4bC00LjQ2NC04LjcxM2MxLjk0My0wLjY0NiwzLjYtMi40NDcsMy42LTUuMjU1DQoJCWMwLTMuMzEyLTIuMzc2LTYuMTItNi40OC02LjEyaC03Ljg0OHYyMC4wODhIMTcxdi04LjA2NGgyLjgwOWwzLjk2LDguMDY0SDE4Mi4zMDRMMTgyLjMwNCw0Ny4wODh6IE0xNzcuNTUyLDMzLjEyDQoJCWMwLDEuNTg0LTEuMTUyLDIuNjY0LTIuODA5LDIuNjY0SDE3MXYtNS4zMjhoMy43NDRDMTc2LjQsMzAuNDU2LDE3Ny41NTIsMzEuNjA4LDE3Ny41NTIsMzMuMTJMMTc3LjU1MiwzMy4xMnoiLz4NCgk8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZmlsbD0iI0ZGRkZGRiIgZD0iTTI0MS4yLDQ3LjA4OEwyMzMuODU2LDI3aC0zLjAyNGwtNy4zNDQsMjAuMDg4aDQuMTA0bDEuMjI0LTMuNg0KCQloNy4xMjhsMS4xNTIsMy42SDI0MS4yTDI0MS4yLDQ3LjA4OHogTTIzNC44NjQsNDAuMTc2aC00Ljk2OGwyLjUyLTcuMjcyTDIzNC44NjQsNDAuMTc2TDIzNC44NjQsNDAuMTc2eiIvPg0KCTxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBmaWxsPSIjRkZGRkZGIiBkPSJNMTAwLjAwOCw0MC4xNzZWMjdIOTYuMTJ2MTMuMDMxYzAsMi4zMDUtMS40NCwzLjY3Mi0zLjUyOCwzLjY3Mg0KCQljLTIuMDg4LDAtMy40NTYtMS4zNjctMy40NTYtMy42NzJWMjdoLTMuODg4djEzLjE3NmMwLDQuMjQ4LDMuMjQsNy4wNTcsNy4zNDQsNy4wNTdTMTAwLjAwOCw0NC40MjQsMTAwLjAwOCw0MC4xNzZMMTAwLjAwOCw0MC4xNzYNCgkJeiIvPg0KCTxwb2x5Z29uIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBmaWxsPSIjRkZGRkZGIiBwb2ludHM9IjExOS45NTIsNDcuMDg4IDExOS45NTIsMjcgMTE1Ljk5MiwyNyAxMTUuOTkyLDM5LjI0IA0KCQkxMDguMDcyLDI3IDEwNC41NDQsMjcgMTA0LjU0NCw0Ny4wODggMTA4LjUwNCw0Ny4wODggMTA4LjUwNCwzNC43MDQgMTE2LjQyNCw0Ny4wODggMTE5Ljk1Miw0Ny4wODggCSIvPg0KCTxwb2x5Z29uIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBmaWxsPSIjRkZGRkZGIiBwb2ludHM9IjEyOC41OTIsNDcuMDg4IDEyOC41OTIsMjcgMTI0LjYzMiwyNyAxMjQuNjMyLDQ3LjA4OCANCgkJMTI4LjU5Miw0Ny4wODggCSIvPg0KCTxwb2x5Z29uIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBmaWxsPSIjRkZGRkZGIiBwb2ludHM9IjE0Ny4zODQsMjcgMTQzLjI4LDI3IDEzOS4yNDgsNDAuMDMxIDEzNS4yMTYsMjcgDQoJCTEzMS4xODQsMjcgMTM3LjgwOCw0Ny4wODggMTQwLjY4OCw0Ny4wODggMTQ3LjM4NCwyNyAJIi8+DQoJPHBvbHlnb24gZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGZpbGw9IiNGRkZGRkYiIHBvaW50cz0iMTYzLjE1Miw0Ny4wMTYgMTYzLjE1Miw0My41NjEgMTUzLjg2NCw0My41NjEgDQoJCTE1My44NjQsMzguNjY0IDE2MS43ODQsMzguNjY0IDE2MS43ODQsMzUuMjA4IDE1My44NjQsMzUuMjA4IDE1My44NjQsMzAuNDU2IDE2My4xNTIsMzAuNDU2IDE2My4xNTIsMjcgMTQ5Ljk3NiwyNyANCgkJMTQ5Ljk3Niw0Ny4wMTYgMTYzLjE1Miw0Ny4wMTYgCSIvPg0KCTxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBmaWxsPSIjRkZGRkZGIiBkPSJNMTk4LjY0OCw0MS4xMTFjMC0xLjcyNy0wLjUwNC0zLjI0LTEuNTg0LTQuMjQ4DQoJCWMtMC43OTItMC43OTItMS45NDQtMS4yOTYtMy44MTYtMS41MTJsLTIuMzc2LTAuMzZjLTAuNzkyLTAuMTQ0LTEuNDM5LTAuNDMyLTEuODcyLTAuNzkyYy0wLjM1OS0wLjM2LTAuNTc1LTAuOTM2LTAuNTc1LTEuNDQNCgkJYzAtMS4zNjgsMS4wMDgtMi41MiwzLjA5Ni0yLjUyYzEuMzY4LDAsMi44OCwwLjE0NCw0LjEwNCwxLjM2OGwyLjUyMS0yLjQ0OGMtMS43MjktMS42NTYtMy43NDQtMi4zNzYtNi40OC0yLjM3Ng0KCQljLTQuMzE5LDAtNi45ODMsMi41Mi02Ljk4Myw2LjEyYzAsMS42NTYsMC40MzIsMi45NTIsMS40MzksMy45NmMwLjg2NCwwLjg2NSwyLjE2LDEuMzY5LDMuODg5LDEuNjU2bDIuMzc2LDAuMzU5DQoJCWMwLjkzNiwwLjE0NSwxLjQzOSwwLjI4OSwxLjgsMC42NDhjMC40MzIsMC40MzIsMC42NDcsMS4wMDgsMC42NDcsMS43MjljMCwxLjU4NC0xLjI5NiwyLjQ0Ny0zLjYsMi40NDcNCgkJYy0xLjgsMC0zLjUyOC0wLjQzMi00LjgyNC0xLjY1NGwtMi41MiwyLjUyYzEuOTQzLDIuMDE2LDQuMjQ4LDIuNjY0LDcuMzQ0LDIuNjY0QzE5NS40MDgsNDcuMjMyLDE5OC42NDgsNDUsMTk4LjY0OCw0MS4xMTENCgkJTDE5OC42NDgsNDEuMTExeiIvPg0KCTxwb2x5Z29uIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBmaWxsPSIjRkZGRkZGIiBwb2ludHM9IjIwNi4zNTIsNDcuMDg4IDIwNi4zNTIsMjcgMjAyLjQ2NCwyNyAyMDIuNDY0LDQ3LjA4OCANCgkJMjA2LjM1Miw0Ny4wODggCSIvPg0KCTxwb2x5Z29uIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBmaWxsPSIjRkZGRkZGIiBwb2ludHM9IjIyNC4xMzYsMzAuNDU2IDIyNC4xMzYsMjcgMjA5LjczNiwyNyAyMDkuNzM2LDMwLjQ1NiANCgkJMjE0Ljk5MiwzMC40NTYgMjE0Ljk5Miw0Ny4wMTYgMjE4Ljg4LDQ3LjAxNiAyMTguODgsMzAuNDU2IDIyNC4xMzYsMzAuNDU2IAkiLz4NCgk8cG9seWdvbiBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZmlsbD0iI0ZGRkZGRiIgcG9pbnRzPSIyNTUuMDI0LDMwLjQ1NiAyNTUuMDI0LDI3IDI0MC42MjQsMjcgMjQwLjYyNCwzMC40NTYgDQoJCTI0NS44OCwzMC40NTYgMjQ1Ljg4LDQ3LjA4OCAyNDkuNzY4LDQ3LjA4OCAyNDkuNzY4LDMwLjQ1NiAyNTUuMDI0LDMwLjQ1NiAJIi8+DQoJPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGZpbGw9IiNGRkZGRkYiIGQ9Ik05OS43OTIsNjMuNjQ4YzAtMy4wMjUsMC4yODgtNS43Ni0yLjAxNi03Ljk5Mg0KCQljLTEuMjk2LTEuMzY5LTMuMTY4LTEuOTQ1LTUuMjU2LTEuOTQ1aC03LjI3MnYyMC4wOWg3LjI3MmMyLjA4OCwwLDMuOTYtMC41NzYsNS4yNTYtMS45NDUNCgkJQzEwMC4wOCw2OS42MjMsOTkuNzkyLDY2LjY3Miw5OS43OTIsNjMuNjQ4TDk5Ljc5Miw2My42NDh6IE05NS45MDQsNjMuNjQ4YzAsMy4wOTYtMC4xNDQsNC41MzUtMC44NjQsNS40DQoJCWMtMC42NDgsMC43OTEtMS41ODQsMS4yMjMtMi44OCwxLjIyM2gtMi45NTJWNTcuMjRoMi45NTJjMS4yOTYsMCwyLjIzMiwwLjQzMiwyLjg4LDEuMjI1DQoJCUM5NS43Niw1OS4zMjgsOTUuOTA0LDYwLjYyMyw5NS45MDQsNjMuNjQ4TDk1LjkwNCw2My42NDh6Ii8+DQoJPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGZpbGw9IiNGRkZGRkYiIGQ9Ik0xMTkuMTYsNzMuODAxbC00LjQ2NC04LjY0MWMxLjk0NC0wLjcyMSwzLjY3Mi0yLjQ0OSwzLjY3Mi01LjI1Ng0KCQljMC0zLjM4NS0yLjQ0OC02LjE5My02LjU1Mi02LjE5M2gtNy44NDh2MjAuMDloMy44ODh2LTcuOTkyaDIuODhsMy44ODgsNy45OTJIMTE5LjE2TDExOS4xNiw3My44MDF6IE0xMTQuNDA4LDU5LjkwNA0KCQljMCwxLjUxMi0xLjA4LDIuNTkyLTIuODA4LDIuNTkyaC0zLjc0NFY1Ny4yNGgzLjc0NEMxMTMuMzI4LDU3LjI0LDExNC40MDgsNTguMzIsMTE0LjQwOCw1OS45MDRMMTE0LjQwOCw1OS45MDR6Ii8+DQoJPHBvbHlnb24gZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGZpbGw9IiNGRkZGRkYiIHBvaW50cz0iMTM1Ljc5Miw3My44MDEgMTM1Ljc5Miw3MC4yNzEgMTI2LjQzMiw3MC4yNzEgDQoJCTEyNi40MzIsNjUuNDQ3IDEzNC4zNTIsNjUuNDQ3IDEzNC4zNTIsNjEuOTIgMTI2LjQzMiw2MS45MiAxMjYuNDMyLDU3LjI0IDEzNS43OTIsNTcuMjQgMTM1Ljc5Miw1My43MTEgMTIyLjU0NCw1My43MTEgDQoJCTEyMi41NDQsNzMuODAxIDEzNS43OTIsNzMuODAxIAkiLz4NCgk8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZmlsbD0iI0ZGRkZGRiIgZD0iTTE1Mi43MTEsNjcuODk2YzAtMS44MDEtMC41MDQtMy4yNC0xLjU4My00LjI0OA0KCQljLTAuODY0LTAuNzkzLTIuMDE3LTEuMjk3LTMuODE2LTEuNTg0bC0yLjM3Ni0wLjM2MWMtMC43OTItMC4wNy0xLjQ0LTAuNDMyLTEuODcyLTAuNzkxcy0wLjU3Ni0wLjkzNi0wLjU3Ni0xLjQzOQ0KCQljMC0xLjM2OSwxLjAwOC0yLjUyMSwzLjA5Ni0yLjUyMWMxLjI5NywwLDIuODgxLDAuMjE3LDQuMTA0LDEuMzY5bDIuNTItMi40NDljLTEuNzI4LTEuNjU0LTMuNzQzLTIuMzAzLTYuNDc5LTIuMzAzDQoJCWMtNC4zOTMsMC02Ljk4NCwyLjUyLTYuOTg0LDYuMDQ3YzAsMS43MjksMC40MzMsMy4wMjUsMS4zNjgsMy45NjFjMC45MzcsMC44NjMsMi4yMzIsMS40MzksMy45NiwxLjY1NmwyLjM3NiwwLjM1OQ0KCQljMC45MzcsMC4xNDUsMS4zNjgsMC4zNTksMS44LDAuNzIxYzAuNDMzLDAuMzU5LDAuNTc2LDAuOTM2LDAuNTc2LDEuNjU2YzAsMS42NTQtMS4yMjQsMi41Mi0zLjUyNywyLjUyDQoJCWMtMS44NzIsMC0zLjYwMS0wLjQzMi00LjgyNC0xLjcyOWwtMi41MjEsMi41MmMxLjk0NCwyLjAxNiw0LjI0OCwyLjY2NCw3LjI3MiwyLjY2NEMxNDkuNDcyLDczLjk0MywxNTIuNzExLDcxLjc4MywxNTIuNzExLDY3Ljg5Ng0KCQlMMTUyLjcxMSw2Ny44OTZ6Ii8+DQoJPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGZpbGw9IiNGRkZGRkYiIGQ9Ik0xNzEuMDcyLDYzLjY0OGMwLTMuMDI1LDAuMjE2LTUuNzYtMi4wMTYtNy45OTINCgkJYy0xLjI5Ni0xLjM2OS0zLjI0LTEuOTQ1LTUuMzI4LTEuOTQ1aC03LjJ2MjAuMDloNy4yYzIuMDg4LDAsNC4wMzItMC41NzYsNS4zMjgtMS45NDUNCgkJQzE3MS4yODgsNjkuNjIzLDE3MS4wNzIsNjYuNjcyLDE3MS4wNzIsNjMuNjQ4TDE3MS4wNzIsNjMuNjQ4eiBNMTY3LjE4NCw2My42NDhjMCwzLjA5Ni0wLjE0NSw0LjUzNS0wLjg2NCw1LjQNCgkJYy0wLjY0NywwLjc5MS0xLjU4NCwxLjIyMy0yLjk1MiwxLjIyM2gtMi45NTJWNTcuMjRoMi45NTJjMS4zNjgsMCwyLjMwNSwwLjQzMiwyLjk1MiwxLjIyNQ0KCQlDMTY3LjA0LDU5LjMyOCwxNjcuMTg0LDYwLjYyMywxNjcuMTg0LDYzLjY0OEwxNjcuMTg0LDYzLjY0OHoiLz4NCgk8cG9seWdvbiBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZmlsbD0iI0ZGRkZGRiIgcG9pbnRzPSIxODguNDI0LDczLjgwMSAxODguNDI0LDcwLjI3MSAxNzkuMTM2LDcwLjI3MSANCgkJMTc5LjEzNiw2NS40NDcgMTg3LjA1Niw2NS40NDcgMTg3LjA1Niw2MS45MiAxNzkuMTM2LDYxLjkyIDE3OS4xMzYsNTcuMjQgMTg4LjQyNCw1Ny4yNCAxODguNDI0LDUzLjcxMSAxNzUuMjQ4LDUzLjcxMSANCgkJMTc1LjI0OCw3My44MDEgMTg4LjQyNCw3My44MDEgCSIvPg0KCTxwb2x5Z29uIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBmaWxsPSIjRkZGRkZGIiBwb2ludHM9IjIwNy43OTIsNzMuODAxIDIwNy43OTIsNTMuNzExIDIwMy44MzIsNTMuNzExIA0KCQkyMDMuODMyLDY2LjAyMyAxOTUuOTEyLDUzLjcxMSAxOTIuMzg0LDUzLjcxMSAxOTIuMzg0LDczLjgwMSAxOTYuMzQ0LDczLjgwMSAxOTYuMzQ0LDYxLjQ4OCAyMDQuMjY0LDczLjgwMSAyMDcuNzkyLDczLjgwMSAJIi8+DQoJPHBvbHlnb24gZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGZpbGw9IiNGRkZGRkYiIHBvaW50cz0iOTkuNjQ4LDMuNjcyIDk5LjY0OCwwLjIxNiA4NS4yNDgsMC4yMTYgODUuMjQ4LDMuNjcyIA0KCQk5MC41MDQsMy42NzIgOTAuNTA0LDIwLjIzMiA5NC4zOTIsMjAuMjMyIDk0LjM5MiwzLjY3MiA5OS42NDgsMy42NzIgCSIvPg0KCTxwb2x5Z29uIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBmaWxsPSIjRkZGRkZGIiBwb2ludHM9IjExNi40OTYsMjAuMjMyIDExNi40OTYsMTYuNzc2IDEwNy4xMzYsMTYuNzc2IA0KCQkxMDcuMTM2LDExLjg4IDExNS4wNTYsMTEuODggMTE1LjA1Niw4LjQyNCAxMDcuMTM2LDguNDI0IDEwNy4xMzYsMy42NzIgMTE2LjQ5NiwzLjY3MiAxMTYuNDk2LDAuMjE2IDEwMy4yNDgsMC4yMTYgDQoJCTEwMy4yNDgsMjAuMjMyIDExNi40OTYsMjAuMjMyIAkiLz4NCgk8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZmlsbD0iI0ZGRkZGRiIgZD0iTTEzNC43MTEsMTQuMTEyaC0zLjk2Yy0wLjQzMiwxLjU4NC0xLjQzOSwyLjgwOC0zLjM4NCwyLjgwOA0KCQljLTEuMDgsMC0xLjk0NC0wLjM2LTIuNTItMS4wMDhjLTAuNzkyLTAuODY0LTEuMDA4LTEuOC0xLjAwOC01LjY4OGMwLTMuODg4LDAuMjE2LTQuODI0LDEuMDA4LTUuNjg4DQoJCWMwLjU3Ni0wLjY0OCwxLjQ0LTEuMDA4LDIuNTItMS4wMDhjMS45NDQsMCwyLjk1MiwxLjIyNCwzLjM4NCwyLjgwOGgzLjk2QzEzMy45OTIsMi4xNiwxMzEuMDQsMCwxMjcuMjk2LDANCgkJYy0yLjE2LDAtMy45NiwwLjc5Mi01LjQsMi4yMzJjLTIuMDE2LDIuMDE2LTEuOTQ0LDQuNTM2LTEuOTQ0LDcuOTkyYzAsMy40NTYtMC4wNzIsNS45NzYsMS45NDQsNy45OTINCgkJYzEuNDQsMS40NCwzLjI0LDIuMjMyLDUuNCwyLjIzMkMxMzEuMDQsMjAuNDQ4LDEzMy45OTIsMTguMjg4LDEzNC43MTEsMTQuMTEyTDEzNC43MTEsMTQuMTEyeiIvPg0KCTxwb2x5Z29uIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBmaWxsPSIjRkZGRkZGIiBwb2ludHM9IjE1MywyMC4yMzIgMTUzLDAuMjE2IDE0OS4xMTIsMC4yMTYgMTQ5LjExMiw4LjQyNCANCgkJMTQyLjI3Miw4LjQyNCAxNDIuMjcyLDAuMjE2IDEzOC4zODQsMC4yMTYgMTM4LjM4NCwyMC4yMzIgMTQyLjI3MiwyMC4yMzIgMTQyLjI3MiwxMS44OCAxNDkuMTEyLDExLjg4IDE0OS4xMTIsMjAuMjMyIDE1MywyMC4yMzIgDQoJCQkiLz4NCgk8cG9seWdvbiBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZmlsbD0iI0ZGRkZGRiIgcG9pbnRzPSIxNzMuMzc1LDIwLjIzMiAxNzMuMzc1LDAuMjE2IDE2OS40ODgsMC4yMTYgDQoJCTE2OS40ODgsMTIuNDU2IDE2MS40OTYsMC4yMTYgMTU4LjA0LDAuMjE2IDE1OC4wNCwyMC4yMzIgMTYxLjkyOCwyMC4yMzIgMTYxLjkyOCw3LjkyIDE2OS45MTksMjAuMjMyIDE3My4zNzUsMjAuMjMyIAkiLz4NCgk8cG9seWdvbiBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZmlsbD0iI0ZGRkZGRiIgcG9pbnRzPSIxODIuMzA0LDIwLjIzMiAxODIuMzA0LDAuMjE2IDE3OC40MTYsMC4yMTYgDQoJCTE3OC40MTYsMjAuMjMyIDE4Mi4zMDQsMjAuMjMyIAkiLz4NCgk8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZmlsbD0iI0ZGRkZGRiIgZD0iTTIwMC4zMDQsMTQuMzI4YzAtMS43MjgtMC41MDQtMy4yNC0xLjU4NC00LjI0OA0KCQljLTAuNzkyLTAuNzkyLTEuOTQ0LTEuMjk2LTMuODE2LTEuNTEybC0yLjM3Ni0wLjM2Yy0wLjc5Mi0wLjE0NC0xLjQ0LTAuNDMyLTEuODcyLTAuNzkyYy0wLjM1OS0wLjQzMi0wLjU3Ni0wLjkzNi0wLjU3Ni0xLjQzOQ0KCQljMC0xLjM2OCwxLjAwOC0yLjUyLDMuMDk3LTIuNTJjMS4zNjcsMCwyLjg4LDAuMTQ0LDQuMTA0LDEuMzY4bDIuNTIxLTIuNDQ4QzE5OC4wNzIsMC43MiwxOTYuMDU2LDAsMTkzLjMyLDANCgkJYy00LjMyLDAtNi45ODQsMi41Mi02Ljk4NCw2LjEyYzAsMS42NTYsMC40MzMsMi45NTIsMS40NCwzLjk2YzAuODY0LDAuODY0LDIuMTYsMS4zNjgsMy44ODgsMS42NTZsMi4zNzYsMC4zNg0KCQljMC45MzcsMC4xNDQsMS40NCwwLjI4OCwxLjgwMSwwLjY0OGMwLjQzMiwwLjQzMiwwLjY0NywxLjAwOCwwLjY0NywxLjcyOGMwLDEuNTg0LTEuMjk2LDIuNDQ4LTMuNiwyLjQ0OA0KCQljLTEuODAxLDAtMy41MjgtMC40MzItNC44MjQtMS42NTZsLTIuNTIxLDIuNTJjMS45NDQsMi4wMTYsNC4yNDgsMi42NjQsNy4zNDUsMi42NjRDMTk3LjA2NCwyMC40NDgsMjAwLjMwNCwxOC4yMTYsMjAwLjMwNCwxNC4zMjgNCgkJTDIwMC4zMDQsMTQuMzI4eiIvPg0KCTxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBmaWxsPSIjRkZGRkZGIiBkPSJNMjE4LjQ0OCwxNC4xMTJoLTMuOTZjLTAuMzU5LDEuNTg0LTEuNDM5LDIuODA4LTMuMzg0LDIuODA4DQoJCWMtMS4wOCwwLTEuOTQ0LTAuMzYtMi41MjEtMS4wMDhjLTAuNzItMC44NjQtMC45MzYtMS44LTAuOTM2LTUuNjg4YzAtMy44ODgsMC4yMTYtNC44MjQsMC45MzYtNS42ODgNCgkJYzAuNTc2LTAuNjQ4LDEuNDQtMS4wMDgsMi41MjEtMS4wMDhjMS45NDQsMCwzLjAyNCwxLjIyNCwzLjM4NCwyLjgwOGgzLjk2QzIxNy43MjgsMi4xNiwyMTQuODQ4LDAsMjExLjEwNCwwDQoJCWMtMi4yMzIsMC00LjAzMiwwLjc5Mi01LjQ3MiwyLjIzMmMtMi4wMTcsMi4wMTYtMS45NDQsNC41MzYtMS45NDQsNy45OTJjMCwzLjQ1Ni0wLjA3Miw1Ljk3NiwxLjk0NCw3Ljk5Mg0KCQljMS40MzksMS40NCwzLjIzOSwyLjIzMiw1LjQ3MiwyLjIzMkMyMTQuNzc2LDIwLjQ0OCwyMTcuNzI4LDE4LjI4OCwyMTguNDQ4LDE0LjExMkwyMTguNDQ4LDE0LjExMnoiLz4NCgk8cG9seWdvbiBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZmlsbD0iI0ZGRkZGRiIgcG9pbnRzPSIyMzYuNzM2LDIwLjIzMiAyMzYuNzM2LDAuMjE2IDIzMi44NDgsMC4yMTYgDQoJCTIzMi44NDgsOC40MjQgMjI2LjA4LDguNDI0IDIyNi4wOCwwLjIxNiAyMjIuMTIsMC4yMTYgMjIyLjEyLDIwLjIzMiAyMjYuMDgsMjAuMjMyIDIyNi4wOCwxMS44OCAyMzIuODQ4LDExLjg4IDIzMi44NDgsMjAuMjMyIA0KCQkyMzYuNzM2LDIwLjIzMiAJIi8+DQoJPHBvbHlnb24gZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGZpbGw9IiNGRkZGRkYiIHBvaW50cz0iMjU1LjA5NiwyMC4yMzIgMjU1LjA5NiwxNi43NzYgMjQ1LjczNiwxNi43NzYgDQoJCTI0NS43MzYsMTEuODggMjUzLjY1NiwxMS44OCAyNTMuNjU2LDguNDI0IDI0NS43MzYsOC40MjQgMjQ1LjczNiwzLjY3MiAyNTUuMDk2LDMuNjcyIDI1NS4wOTYsMC4yMTYgMjQxLjg0OCwwLjIxNiANCgkJMjQxLjg0OCwyMC4yMzIgMjU1LjA5NiwyMC4yMzIgCSIvPg0KCTxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBmaWxsPSIjRkZGRkZGIiBkPSJNNC40NjQsMjkuMjMyaDIwLjA4OHYyMy40MDFoMjQuNTUyVjI5LjIzMkg2OS4xMnYyMC41Mg0KCQlMNDkuNTM2LDY5LjMzNkgyNC4wNDhMNC40NjQsNDkuNzUyVjI5LjIzMkw0LjQ2NCwyOS4yMzJ6IE02Ni45NiwzMS40NjRINTEuMzM2djIzLjM5OUgyMi4zMlYzMS40NjRINi42OTZ2MTcuNDI1bDE4LjI4OCwxOC4yMTUNCgkJaDIzLjY4OGwxOC4yMTYtMTguMjE1TDY2Ljk2LDMxLjQ2NEw2Ni45NiwzMS40NjR6IE02Ni41MjgsMjQuNzY4TDQ4LjY3Miw2LjkxMkgyNC45ODRMNy4xMjgsMjQuNzY4aDIxLjg4OHYyMy40SDQ0LjY0di0yMy40DQoJCUg2Ni41MjhMNjYuNTI4LDI0Ljc2OHogTTY5LjEyLDI3SDQ2Ljg3MnYyMy40SDI2Ljc4NFYyN0g0LjQ2NHYtMi43MzZMMjQuMDQ4LDQuNjhoMjUuNDg4TDY5LjEyLDI0LjI2NFYyN0w2OS4xMiwyN0w2OS4xMiwyN3oNCgkJIE0wLDIyLjUzNlY1MS40OGwyMi4zMiwyMi4zMmgyOS4wMTZsMjIuMjQ4LTIyLjMyVjIyLjUzNkw1MS4zMzYsMC4yMTZIMjIuMzJMMCwyMi41MzZMMCwyMi41MzZ6IE0yLjIzMiwyMy40djI3LjIxNWwyMC45NTIsMjAuOTUzDQoJCUg1MC40bDIwLjk1Mi0yMC45NTNWMjMuNEw1MC40LDIuNDQ4SDIzLjE4NEwyLjIzMiwyMy40TDIuMjMyLDIzLjR6Ii8+DQo8L2c+DQo8L3N2Zz4NCg==">
+    <h1 style="display: inline-block">HWP: VON-NEUMANN-EDITOR</h1>
+</header>
+
+<div id="content">
+    <h2>EDITOR</h2>
+    <hr>
+    <table id="edit-table" style="border-spacing: 0">
+        <tr>
+            <th class="gutter-head">Line</th>
+            <th class="gutter-head">ADR</th>
+            <th class="gutter-head">BIN</th>
+            <th class="gutter-head">HEX</th>
+            <th class="gutter-head">DEB</th>
+            <th id="position" class="gutter-head" style="text-align: right">@ 0</th>
+        </tr>
+        <tr id="edit-row">
+            <td id="gutter-container">
+                <div id="gutter" class="gutter-content"></div>
+            </td>
+
+            <td id="adr-container">
+                <div id="adr" class="gutter-content">
+                    <pre>     </pre>
+                </div>
+            </td>
+            <td id="bin-container">
+                <div id="bin" class="gutter-content">
+                    <pre>                 </pre>
+                </div>
+            </td>
+            <td id="hex-container">
+                <div id="hex" class="gutter-content">
+                    <pre>     </pre>
+                </div>
+            </td>
+            <!--td id="deb-container">
+                <div id="deb" class="gutter-content">
+                    <pre>          </pre>
+                </div>
+            </td-->
+
+            <td id="editor-container">
+                <!--suppress HtmlFormInputWithoutLabel -->
+                <textarea id="editor" rows="1" cols="80" autofocus
+                          autocapitalize="off" autocomplete="off" spellcheck="false"
+                          onresize="console.log('test')"></textarea>
+            </td>
+        </tr>
+    </table>
+    <pre style="margin-left: 2em; font-family: monospace; color: #aaa">
+Line - text line                  BIN - binary machine code
+ADR  - hexadecimal address        HEX - hexadecimal machine code</pre>
+
+    <h2 style="margin-top: 2em">EMULATOR</h2>
+    <hr>
+
+    <div style="margin-left: 2em">
+        <button id="button-reboot" class="button-reboot" onclick="CPU_CONTROLLER.reboot()">REBOOT</button>
+        <button id="button-reset" class="button-reset" onclick="CPU_CONTROLLER.reset()">RESET</button>
+        <button id="button-load" class="button-load" onclick="CPU_CONTROLLER.loadProgram()" disabled="disabled">
+            LOAD
+        </button>
+        <button id="button-start" class="button-start" disabled="disabled" onclick="CPU_CONTROLLER.start()">
+            START
+        </button>
+        <button id="button-step" class="button-step" onclick="CPU_CONTROLLER.doCycle()" disabled="disabled">
+            STEP
+        </button>
+        <label>
+            <input id="input-emu-speed" type="range" min="0" max="4" value="0" step="1">
+        </label>
+        <span id="display-emu-speed" style="font-family: monospace; font-size: 11pt; color: #eee">
+            Single Step
+        </span>
+        <pre style="font-family: monospace; color: #aaa;">
+REBOOT - wipe memory, registers, etc.              RESET - clear registers & flags
+LOAD   - load program into memory                  START - start the CPU
+STOP   - stop the CPU                              STEP  - perform a single instruction cycle</pre>
+
+        <h4 style="margin: 1.5em 0 0.5em">REGISTERS AND FLAGS</h4>
+        <table id="flag-table" class="cpu-data-table" style="margin-left: 0; margin-bottom: 0.5em">
+            <thead>
+            <tr>
+                <th class="mem-head">L</th>
+                <th class="mem-head">ACCU</th>
+                <th class="spacing-cell"></th>
+                <th class="mem-head">S</th>
+                <th class="mem-head">Z</th>
+                <th class="mem-head">C</th>
+                <th class="spacing-cell"></th>
+                <th class="mem-head">PC</th>
+                <th class="mem-head">NXT</th>
+                <th class="spacing-cell"></th>
+                <th class="mem-head">SP</th>
+                <th class="mem-head">TOP</th>
+
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td id="reg-l" class="data-cell"></td>
+                <td id="reg-a" class="data-cell"></td>
+                <td class="spacing-cell"></td>
+                <td id="flag-s" class="data-cell"></td>
+                <td id="flag-z" class="data-cell"></td>
+                <td id="flag-c" class="data-cell"></td>
+                <th class="spacing-cell"></th>
+                <td id="rp-pc" class="data-cell pc">00</td>
+                <td id="pc-mnemonic" class="inspect-cell"></td>
+                <th class="spacing-cell"></th>
+                <td id="rp-sp" class="data-cell sp"></td>
+                <td id="sp-top" class="data-cell"></td>
+
+            </tr>
+            </tbody>
+        </table>
+        <pre style="font-family: monospace; color: #aaa;">
+L    - L-Register (5)        S - Sign        PC  - Program Counter         SP  - Stack Pointer
+ACCU - Accumulator           Z - Zero        NXT - Next Instruction        TOP - Top of Stack
+                             C - Carry</pre>
+
+        <h4 style="margin: 1em 0 0.5em">ERRLOG</h4>
+        <table id="err-table" class="cpu-data-table" style="margin-left: 0; margin-bottom: 2em">
+            <tbody>
+            <tr>
+                <th class="mem-head">ERR</th>
+                <td id="errlog" class="data-cell" style="min-width: 48em"></td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div style="display: flex; flex-wrap: wrap">
+            <div style="margin-right: 2em">
+                <h4>MEMORY</h4>
+                <table id="mem-table" class="cpu-data-table" style="margin-left: 0">
+                    <thead>
+                    <tr>
+                        <th class="mem-head">H\L</th>
+                        <th id="_lo0" class="mem-head">0</th>
+                        <th id="_lo1" class="mem-head">1</th>
+                        <th id="_lo2" class="mem-head">2</th>
+                        <th id="_lo3" class="mem-head">3</th>
+                        <th id="_lo4" class="mem-head">4</th>
+                        <th id="_lo5" class="mem-head">5</th>
+                        <th id="_lo6" class="mem-head">6</th>
+                        <th id="_lo7" class="mem-head">7</th>
+                        <th id="_lo8" class="mem-head">8</th>
+                        <th id="_lo9" class="mem-head">9</th>
+                        <th id="_loA" class="mem-head">A</th>
+                        <th id="_loB" class="mem-head">B</th>
+                        <th id="_loC" class="mem-head">C</th>
+                        <th id="_loD" class="mem-head">D</th>
+                        <th id="_loE" class="mem-head">E</th>
+                        <th id="_loF" class="mem-head">F</th>
+                    </tr>
+                    </thead>
+                    <tbody id="mem-table-body">
+                    <tr>
+                        <th id="_hi0" class="mem-head">0</th>
+                    </tr>
+                    <tr>
+                        <th id="_hi1" class="mem-head">1</th>
+                    </tr>
+                    <tr>
+                        <th id="_hi2" class="mem-head">2</th>
+                    </tr>
+                    <tr>
+                        <th id="_hi3" class="mem-head">3</th>
+                    </tr>
+                    <tr>
+                        <th id="_hi4" class="mem-head">4</th>
+                    </tr>
+                    <tr>
+                        <th id="_hi5" class="mem-head">5</th>
+                    </tr>
+                    <tr>
+                        <th id="_hi6" class="mem-head">6</th>
+                    </tr>
+                    <tr>
+                        <th id="_hi7" class="mem-head">7</th>
+                    </tr>
+                    <tr>
+                        <th id="_hi8" class="mem-head">8</th>
+                    </tr>
+                    <tr>
+                        <th id="_hi9" class="mem-head">9</th>
+                    </tr>
+                    <tr>
+                        <th id="_hiA" class="mem-head">A</th>
+                    </tr>
+                    <tr>
+                        <th id="_hiB" class="mem-head">B</th>
+                    </tr>
+                    <tr>
+                        <th id="_hiC" class="mem-head">C</th>
+                    </tr>
+                    <tr>
+                        <th id="_hiD" class="mem-head">D</th>
+                    </tr>
+                    <tr>
+                        <th id="_hiE" class="mem-head">E</th>
+                    </tr>
+                    <tr>
+                        <th id="_hiF" class="mem-head">F</th>
+                    </tr>
+                    </tbody>
+                </table>
+                <pre style="font-family: monospace; color: #aaa; margin-bottom: 1em">
+H - highest 4 bits of address (rows)        L - lowest 4 bits of address (columns)</pre>
+            </div>
+
+            <div style="">
+                <h4>INSPECT</h4>
+                <table id="inspect-table" class="cpu-data-table" style="margin-left: 0; margin-bottom: 0.5em">
+                    <tr>
+                        <th class="mem-head">ADR</th>
+                        <td id="inspect-adr" class="inspect-cell"></td>
+                    </tr>
+                    <tr>
+                        <th class="mem-head">BIN</th>
+                        <td id="inspect-bin" class="inspect-cell"></td>
+                    </tr>
+                    <tr>
+                        <th class="mem-head">OCT</th>
+                        <td id="inspect-oct" class="inspect-cell"></td>
+                    </tr>
+                    <tr>
+                        <th class="mem-head">DEC(U)</th>
+                        <td id="inspect-udec" class="inspect-cell"></td>
+                    </tr>
+                    <tr>
+                        <th class="mem-head">DEC(S)</th>
+                        <td id="inspect-sdec" class="inspect-cell"></td>
+                    </tr>
+                    <tr>
+                        <th class="mem-head">HEX</th>
+                        <td id="inspect-hex" class="inspect-cell"></td>
+                    </tr>
+                    <tr>
+                        <th class="mem-head">MNE</th>
+                        <td id="inspect-mne" class="inspect-cell"></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script id="script-utility">
+    /*
+** Returns the caret (cursor) position of the specified text field (oField).
+** Return value range is 0-oField.value.length.
+*/
+    function doGetCaretPosition(element) {
+
+        // Initialize
+        let iCaretPos = 0;
+
+        // IE Support
+        // noinspection JSUnresolvedVariable
+        if (document.selection) {
+
+            // Set focus on the element
+            element.focus();
+
+            // To get cursor position, get empty selection range
+            let oSel = document.selection.createRange();
+
+            // Move selection start to 0 position
+            // noinspection JSUnresolvedFunction
+            oSel.moveStart('character', -element.value.length);
+
+            // The caret position is selection length
+            iCaretPos = oSel.text.length;
+        }
+
+        // Firefox support
+        else if (typeof element.selectionStart === 'number')
+            iCaretPos = element.selectionDirection === 'backward' ? element.selectionStart : element.selectionEnd;
+
+        // Return results
+        return iCaretPos;
+    }
+
+    /**
+     * Safely writes to a table cell or other container by first removing all of its children (if there are any) and
+     * then appending the given object (str).
+     *
+     * @param cell the cell to be written to
+     * @param str the content of the cell
+     */
+    function writeToCell(cell, str) {
+        if (cell.firstChild)
+            cell.firstChild.remove();
+        cell.append(str)
+    }
+
+    Number.prototype.toBinByteString = function () {
+        return this.toString(2).toUpperCase().padStart(8, "0")
+    };
+
+    Number.prototype.toOctByteString = function () {
+        return this.toString(8).toUpperCase().padStart(4, "0")
+    };
+
+    const int8Buffer = new Int8Array(1);
+    Number.prototype.toSignedDecByteString = function () {
+        int8Buffer[0] = this;
+        return int8Buffer[0].toString();
+    };
+
+    Number.prototype.toHexByteString = function () {
+        return this.toString(16).toUpperCase().padStart(2, "0")
+    };
+</script>
+
+<script id="script-const-and-init">
+    //const MAIN_CONTAINER = document.getElementById("edit-row");
+    const GUTTER = document.getElementById("gutter");
+    const HEX = document.getElementById("hex");
+    const BIN = document.getElementById("bin");
+    const ADR = document.getElementById("adr");
+    const DEB = document.getElementById("deb");
+
+    const EDITOR = document.getElementById("editor");
+    const POSITION = document.getElementById("position");
+
+    const CELL_REG_L = document.getElementById("reg-l");
+    const CELL_REG_A = document.getElementById("reg-a");
+    const CELL_RP_PC = document.getElementById("rp-pc");
+    const CELL_PC_MNE = document.getElementById("pc-mnemonic");
+    const CELL_RP_SP = document.getElementById("rp-sp");
+    const CELL_SP_TOP = document.getElementById("sp-top");
+    const CELL_FLAG_S = document.getElementById("flag-s");
+    const CELL_FLAG_Z = document.getElementById("flag-z");
+    const CELL_FLAG_C = document.getElementById("flag-c");
+    const CELL_ERRLOG = document.getElementById("errlog");
+
+    const BUTTON_LOAD = document.getElementById("button-load");
+    const BUTTON_START = document.getElementById("button-start");
+    const BUTTON_REBOOT = document.getElementById("button-reboot");
+    const BUTTON_RESET = document.getElementById("button-reset");
+    const BUTTON_STEP = document.getElementById("button-step");
+    const INPUT_EMU_SPEED = document.getElementById("input-emu-speed");
+    const DISPLAY_EMU_SPEED = document.getElementById("display-emu-speed");
+
+    const MEM_TABLE = document.getElementById("mem-table");
+    const MEM_TABLE_BODY = document.getElementById("mem-table-body");
+
+    const INSPECT_ADR = document.getElementById("inspect-adr");
+    const INSPECT_BIN = document.getElementById("inspect-bin");
+    const INSPECT_OCT = document.getElementById("inspect-oct");
+    const INSPECT_UDEC = document.getElementById("inspect-udec");
+    const INSPECT_SDEC = document.getElementById("inspect-sdec");
+    const INSPECT_HEX = document.getElementById("inspect-hex");
+    const INSPECT_MNE = document.getElementById("inspect-mne");
+
+
+    let numLinesPtr = [0];
+    let hexLinesPtr = [1];
+    let binLinesPtr = [1];
+    let adrLinesPtr = [1];
+    let debLinesPtr = [1];
+
+    const SPACE_05 = " ".repeat(5);
+    const SPACE_17 = " ".repeat(17);
+    const SPACE_10 = " ".repeat(10);
+
+    const GUTTERS_AND_POINTERS = [
+        {gutter: GUTTER, pointer: numLinesPtr, space: null, enable: true, type: 'line'},
+        {gutter: HEX, pointer: hexLinesPtr, space: SPACE_05, enable: true, type: 'content'},
+        {gutter: BIN, pointer: binLinesPtr, space: SPACE_17, enable: true, type: 'content'},
+        {gutter: ADR, pointer: adrLinesPtr, space: SPACE_05, enable: true, type: 'content'},
+        {gutter: DEB, pointer: debLinesPtr, space: SPACE_10, enable: false, type: 'content'}
+    ];
+
+    const LINE_GUTTER_PAD_SIZE = 2;
+
+
+    function fixGutterHeights() {
+        for (let gutter of GUTTERS_AND_POINTERS) {
+            if (!gutter.enable) continue;
+            let gutterElement = gutter.gutter;
+            gutterElement.style.maxHeight = EDITOR.offsetHeight.toString() + "px";
+            //if (gutter.client)
+        }
+    }
+
+    fixGutterHeights();
+
+    const MEM_TABLE_ARRAY = new Array(256);
+    {// populate memory table and store references
+        let index = 0;
+        for (let row of MEM_TABLE_BODY.children) {
+            for (let i = 0; i < 16; i++, index++) {
+                let cell = document.createElement("td");
+                cell.id = "_mem" + index.toHexByteString();
+                cell.className = "mem-cell";
+                //cell.append("00");
+                row.appendChild(cell);
+                MEM_TABLE_ARRAY[index] = cell;
+            }
+        }
+    }
+</script>
+
+<script id="script-editor-behavior">
+    let editorDirty = false;
+
+    String.prototype.lines = function () {
+        return this.split(/\r?\n/);
+    };
+    String.prototype.lineCount = function () {
+        let result = 1;
+        for (let char of this) {
+            if (char === '\n')
+                result++;
+        }
+        return result;
+    };
+    //console.log(EDITOR.offsetHeight);
+    //console.log(GUTTER.style.maxHeight);
+
+    //MAIN_CONTAINER.style.height = EDITOR.height;
+
+    let isSyncingLeftScroll = false;
+    let isSyncingRightScroll = false;
+
+    EDITOR.addEventListener("scroll", () => {
+        if (!isSyncingRightScroll) {
+            isSyncingLeftScroll = true;
+            for (let gutterInfo of GUTTERS_AND_POINTERS) {
+                if (!gutterInfo.enable) continue;
+                gutterInfo.gutter.scrollTop = EDITOR.scrollTop;
+            }
+        }
+        isSyncingRightScroll = false;
+    });
+
+    EDITOR.addEventListener('keydown', () => {
+        setTimeout(() => {
+            if (document.activeElement === EDITOR) {
+                POSITION.removeChild(POSITION.childNodes[0]);
+                POSITION.append("@ " + doGetCaretPosition(EDITOR))
+            }
+        }, 50);
+    });
+
+    function createContainer(tagName, content) {
+        let result = document.createElement(tagName);
+        result.append(content);
+        return result;
+    }
+
+    function updateLineGutter(gutter, linesPtr, targetLines) {
+        for (; linesPtr[0] < targetLines; linesPtr[0]++) {
+            let child = createContainer("pre", (linesPtr[0] + 1).toString().padStart(LINE_GUTTER_PAD_SIZE, "0"));
+            child.className = "line-empty";
+            gutter.append(child);
+        }
+        for (; linesPtr[0] > targetLines; linesPtr[0]--) {
+            gutter.removeChild(gutter.childNodes.item(gutter.childNodes.length - 1));
+        }
+    }
+
+    updateLineGutter(GUTTER, numLinesPtr, 1);
+
+    function updateContentGutter(gutter, linesPtr, targetLines, space) {
+        for (; linesPtr[0] < targetLines; linesPtr[0]++) {
+            let child = createContainer("pre", space);
+            gutter.appendChild(child);
+        }
+        for (; linesPtr[0] > targetLines; linesPtr[0]--) {
+            gutter.removeChild(gutter.childNodes.item(gutter.childNodes.length - 1));
+        }
+    }
+
+    function clearChildren(parent) {
+        while (parent.firstChild) {
+            parent.removeChild(parent.firstChild);
+        }
+    }
+
+    function clearGutters() {
+        let editorLines = EDITOR.value.lineCount();
+
+        for (let obj of GUTTERS_AND_POINTERS) {
+            if (!obj.enable) continue;
+            clearChildren(obj.gutter);
+            obj.pointer[0] = 0;
+        }
+
+        allocateGutterSpace(editorLines);
+    }
+
+    function allocateGutterSpace(targetLineCount) {
+        for (let obj of GUTTERS_AND_POINTERS) {
+            if (!obj.enable) continue;
+            if (obj.type === "line")
+                updateLineGutter(GUTTER, numLinesPtr, targetLineCount);
+            if (obj.type === "content")
+                updateContentGutter(obj.gutter, obj.pointer, targetLineCount, obj.space);
+        }
+    }
+
+    EDITOR.addEventListener("input", (event) => {
+        //console.log(doGetCaretPosition(EDITOR));
+        let editorLines = EDITOR.value.lineCount();
+        editorDirty = true;
+        //console.log(event);
+        // noinspection JSUnresolvedVariable
+        if (event.inputType === undefined || event.inputType !== "insertText" || event.data === null) {
+            allocateGutterSpace(editorLines);
+        }
+    });
+
+    function parseEditor() {
+        if (editorDirty) {
+            editorDirty = false;
+            doParseEditor();
+            if (CPU_CONTROLLER.isStopped()) {
+                if (PROGRAM.length)
+                    BUTTON_LOAD.removeAttribute("disabled");
+                else
+                    BUTTON_LOAD.setAttribute("disabled", "disabled");
+            }
+        }
+    }
+
+    setInterval(parseEditor, 100);
+</script>
+
+<script id="script-emu-behavior">
+    let prevInspectByte = null;
+    let prevIndex = -1;
+
+    function getMemoryTableHeadLo(index) {
+        return document.getElementById("_lo" + (index & 0x0F).toString(16).toUpperCase());
+    }
+
+    function getMemoryTableHeadHi(index) {
+        return document.getElementById("_hi" + ((index >>> 4) & 0x0F).toString(16).toUpperCase());
+    }
+
+    function inspectByte(byte, index) {
+        //console.log(index);
+        if (prevIndex >= 0) {
+            for (let head of [getMemoryTableHeadLo(prevIndex), getMemoryTableHeadHi(prevIndex)]) {
+                head.style.color = "#aaa";
+                head.style.backgroundColor = "unset";
+            }
+        }
+        for (let head of [getMemoryTableHeadLo(index), getMemoryTableHeadHi(index)]) {
+            head.style.color = "#fff64d";
+            head.style.backgroundColor = "#665f3d";
+        }
+        prevIndex = index;
+
+        writeToCell(INSPECT_ADR, index.toHexByteString());
+
+        if (byte === prevInspectByte) {
+            //console.log(byte + "   " + prevInspectByte);
+            return;
+        }
+        prevInspectByte = byte;
+        if (byte === null) {
+            for (let cell of [INSPECT_BIN, INSPECT_OCT, INSPECT_UDEC, INSPECT_SDEC, INSPECT_HEX, INSPECT_MNE]) {
+                if (cell.firstChild)
+                    cell.firstChild.remove();
+            }
+            return;
+        }
+        writeToCell(INSPECT_BIN, byte.toBinByteString());
+        writeToCell(INSPECT_OCT, byte.toOctByteString());
+        writeToCell(INSPECT_UDEC, byte.toString().padStart(3, "0"));
+        writeToCell(INSPECT_SDEC, byte.toSignedDecByteString());
+        writeToCell(INSPECT_HEX, byte.toHexByteString());
+
+        let instruction = decode(CPU.mem, index);
+        writeToCell(INSPECT_MNE, instruction ? format(instruction) : "???");
+    }
+
+    {
+        const EMU_SPEED = [
+            {frequency: -1, display: "Single Step"},
+            {frequency: 1, display: "1Hz"},
+            {frequency: 10, display: "10Hz"},
+            {frequency: 100, display: "100Hz"},
+            {frequency: 1000, display: "1kHz"}
+        ];
+        for (let emuSpeed of EMU_SPEED)
+            emuSpeed.interval = emuSpeed.frequency === 0 ? 0 : 1 / emuSpeed.frequency * 1000;
+
+        let currentIntervalHandle = null;
+
+        INPUT_EMU_SPEED.addEventListener('input', () => {
+            let speed = EMU_SPEED[INPUT_EMU_SPEED.value];
+            writeToCell(DISPLAY_EMU_SPEED, speed.display);
+
+            if (currentIntervalHandle) {
+                clearInterval(currentIntervalHandle);
+                currentIntervalHandle = null;
+            }
+
+            if (speed.frequency < 0) return;
+            currentIntervalHandle = setInterval(() => {
+                if (!CPU_CONTROLLER.isStopped())
+                    CPU_CONTROLLER.doCycle();
+            }, speed.interval);
+        });
+    }
+
+    {
+        MEM_TABLE.addEventListener('mouseover', (event) => {
+            let cell = event.target;
+            if (cell.id && cell.id.startsWith("_mem")) {
+                let index = parseInt(cell.id.substring(4), 16);
+                //console.log(cell + " -> " + index)
+                if (cell.firstChild) {
+                    //console.log(cell.firstChild);
+                    let byte = CPU.mem[index];
+                    inspectByte(byte, index);
+                } else inspectByte(null, index)
+            }
+        });
+    }
+</script>
+
+<script async="async">
+    const MEM_FLAG_WRITTEN = 0b001;
+    const MEM_FLAG_PROGRAM = 0b010;
+    const MEM_FLAG_STACK = 0b00100;
+    const MEM_FLAG_HEAP = 0b001000;
+    const MEM_FLAGS_PROGRAM = MEM_FLAG_WRITTEN | MEM_FLAG_PROGRAM;
+
+    //const REG_FLAG_LEGAL = 0b0001;
+    //const REG_FLAG_WRITTEN = 0b10;
+
+    const CPU = {
+        /** 256 bytes of memory */
+        mem: new Uint8Array(256),
+        memFlags: new Uint8Array(256),
+        /** 8 registers, of which only L (5) and A (7 = accumulator) are actually used.
+         * Other registers are 8080-only (0-4) or memory reference. (7) */
+        reg: new Uint8Array(8),
+        /** Stores which registers have been written to and are thus deterministic. */
+        regWritten: new Uint8Array(8),
+        /** 256 IO-Ports */
+        io: new Uint8Array(256),
+        /** The usable processor flags. (As compared to 8080, parity and auxiliary carry are missing) */
+        flags: {
+            /** sign bit */
+            S: null,
+            /** zero bit */
+            Z: null,
+            /** carry bit */
+            C: null
+        },
+        sp: null,
+        pc: 0,
+        power: false,
+        /** Indicates that the CPU can not be interrupted. */
+        interruptable: true,
+        /** Indicates that the CPU has been stopped, thus no instructions get executed until it is started again. */
+        stopped: true,
+        /** Indicates that the CPU has encountered an error and can't be used until a reset occurs. */
+        crashed: false,
+    };
+
+    /** The HTML-integrated CPU controller.
+     * With this object, changes to the CPU can be made which will also be displayed in the memory table etc. */
+    class CPUController {
+
+        constructor(cpu) {
+            this.cpu = cpu;
+        }
+
+        loadProgram() {
+            //console.log("loeading program");
+            if (!this.cpu.power) {
+                this.cpu.power = true;
+                this.reset();
+                this.cpu.stopped = true;
+            } else if (!this.cpu.stopped) {
+                return;
+            }
+            //this.reset();
+            for (let entry of PROGRAM) {
+                this.writeMemory(entry.address, entry.bytes[0], MEM_FLAGS_PROGRAM);
+                if (entry.bytes.length > 1)
+                    this.writeMemory(entry.address + 1, entry.bytes[1], MEM_FLAGS_PROGRAM);
+            }
+            BUTTON_START.removeAttribute("disabled");
+        }
+
+        start() {
+            //console.log("starting");
+            if (!this.cpu.stopped) return;
+            this.cpu.stopped = false;
+            BUTTON_REBOOT.setAttribute("disabled", "disabled");
+            BUTTON_RESET.setAttribute("disabled", "disabled");
+            BUTTON_LOAD.setAttribute("disabled", "disabled");
+            BUTTON_START.firstChild.replaceWith("STOP");
+            BUTTON_START.className = "button-stop";
+            BUTTON_START.onclick = () => this.stop();
+            if (!this.cpu.crashed)
+                BUTTON_STEP.removeAttribute("disabled");
+        }
+
+        stop() {
+            //console.log("stopping");
+            if (this.cpu.stopped) return;
+            this.cpu.stopped = true;
+            if (PROGRAM.length)
+                BUTTON_LOAD.removeAttribute("disabled");
+            BUTTON_REBOOT.removeAttribute("disabled");
+            BUTTON_RESET.removeAttribute("disabled");
+            BUTTON_START.firstChild.replaceWith("START");
+            BUTTON_START.className = "button-start";
+            BUTTON_START.onclick = () => this.start();
+            BUTTON_STEP.setAttribute("disabled", "disabled");
+        }
+
+        reset() {
+            //this.writeRegister(REG_8080.A, 0);
+            //this.writeRegister(REG_8080.L, 0);
+            this.enableInterrupt();
+            this.writeProgramCounter(0);
+            this.cpu.crashed = false;
+
+            if (CELL_ERRLOG.firstChild) {
+                CELL_ERRLOG.firstChild.remove();
+                CELL_ERRLOG.style.backgroundColor = "#333";
+            }
+        }
+
+        reboot() {
+            this.reset();
+
+            // clear cells
+            for (let cell of [CELL_REG_A, CELL_REG_L, CELL_FLAG_C, CELL_FLAG_Z, CELL_FLAG_S, CELL_RP_SP]) {
+                if (cell.firstChild)
+                    cell.firstChild.remove();
+            }
+
+            // clear L, ACCU, and flags
+            for (let i = 0; i < this.cpu.reg.length; i++)
+                this.cpu.regWritten[i] = 0;
+            this.cpu.flags.C = null;
+            this.cpu.flags.Z = null;
+            this.cpu.flags.S = null;
+
+            // clear stack pointer
+            if (this.cpu.sp !== null)
+                MEM_TABLE_ARRAY[this.cpu.sp].classList.remove("sp");
+            this.cpu.sp = null;
+
+            // zero out memory and turn it nondeterministic
+            for (let i = 0; i < this.cpu.mem.length; i++) {
+                this.writeMemory(i, 0, 0);
+            }
+        }
+
+        isStopped() {
+            return this.cpu.stopped;
+        }
+
+        decodeNextInstruction(checkDeterminism = true) {
+            function verifyDeterminism(cpu, address) {
+                if ((cpu.memFlags[address] & MEM_FLAG_WRITTEN) === 0)
+                    throw 'fetchNondeterministicInstruction';
+            }
+
+            let pc = this.cpu.pc;
+            if (checkDeterminism) {
+                verifyDeterminism(this.cpu, pc);
+                let upperByteAddress = (pc + 1) & 0xFF;
+
+                let buffer = [this.cpu.mem[pc], this.cpu.mem[upperByteAddress]];
+                let result = decode(buffer, 0);
+                if (!result)
+                    return null;
+                else if (result.instruction.bytes > 1) {
+                    verifyDeterminism(this.cpu, upperByteAddress);
+                }
+                return result;
+            } else if (pc === 0xFF) {
+                // if the PC is at 0xFF, a two-byte instruction such as MOV could require accessing the memory at 0x00
+                // the memory array doesn't support such a wrap-around, thus we prefetch all in a buffer
+                let buffer = [this.cpu.mem[0xFF], this.cpu.mem[0x00]];
+                return decode(buffer, 0);
+            } else {
+                return decode(this.cpu.mem, this.cpu.pc);
+            }
+        }
+
+        _doCycle() {
+            if (this.cpu.stopped) return;
+
+            // INSTRUCTION FETCH  &  INSTRUCTION DECODE:
+            //     fetch the instruction at the current program counter
+            let instructionObject = this.decodeNextInstruction(true);
+            if (!instructionObject) {
+                throw 'decodeInstructionFailed';
+            }
+            let instruction = instructionObject.instruction;
+            let operands = instructionObject.operands;
+
+            // EXECUTE
+            switch (operands.length) {
+                case 0:
+                    instruction.exec();
+                    break;
+                case 1:
+                    instruction.exec(operands[0]);
+                    break;
+                case 2:
+                    instruction.exec(operands[0], operands[1]);
+                    break;
+            }
+
+            // POST-EXECUTE
+            //     branch instructions manually manage their program counters, other instructions lead to an automatic
+            //     increment based on their length in bytes
+            if (!instruction.manualPC) {
+                let pc = this.cpu.pc + instruction.bytes;
+                this.writeProgramCounter(pc)
+            }
+        }
+
+        doCycle() {
+            if (this.cpu.crashed) return;
+
+            try {
+                this._doCycle()
+            } catch (e) {
+                writeToCell(CELL_ERRLOG, e);
+                CELL_ERRLOG.style.backgroundColor = "#663d3d";
+                this.cpu.crashed = true;
+                BUTTON_STEP.setAttribute("disabled", "disabled");
+                //CELL_ERRLOG.classList.add("err")
+            }
+        }
+
+        // noinspection JSUnusedGlobalSymbols
+        interrupt() {
+            if (!this.cpu.interruptable) return;
+            this.cpu.stopped = false;
+        }
+
+        halt() {
+            this.stop()
+        }
+
+        enableInterrupt() {
+            this.cpu.interruptable = true;
+        }
+
+        disableInterrupt() {
+            this.cpu.interruptable = false;
+        }
+
+        _accessRegister(reg) {
+            if (!this.cpu.regWritten[reg])
+                throw 'readNondeterministicRegister';
+            return this.cpu.reg[reg];
+        }
+
+        readRegister(reg) {
+            if (reg < REG_8080.L && reg > REG_8080.A)
+                throw 'readFromArbitraryRegister';
+            if (reg === REG_8080.M) {
+                let address = this._accessRegister(REG_8080.L);
+                if ((this.cpu.memFlags[address] & MEM_FLAG_WRITTEN) === 0)
+                    throw 'readWithPointerToNondeterministicMemory';
+                return this.cpu.mem[address];
+            }
+            return this._accessRegister(reg);
+        }
+
+        writeRegister(reg, byte) {
+            // memory reference used as register
+            if (reg === REG_8080.M) {
+                this.writeHeapMemory(this._accessRegister(REG_8080.L), byte);
+                return;
+            }
+
+            // actual register is target
+            this.cpu.reg[reg] = byte;
+            this.cpu.regWritten[reg] = 1;
+            if (reg === REG_8080.L)
+                writeToCell(CELL_REG_L, byte.toHexByteString());
+            else if (reg === REG_8080.A)
+                writeToCell(CELL_REG_A, byte.toHexByteString());
+            else throw 'writeToArbitraryRegister';
+        }
+
+        writeRegisterPair(rp, byte) {
+            if (rp !== RP_8080.SP)
+                throw 'writeToArbitraryRegisterPair';
+            if (this.cpu.sp !== null)
+                MEM_TABLE_ARRAY[this.cpu.sp].classList.remove("sp");
+
+            MEM_TABLE_ARRAY[byte].classList.add("sp");
+            writeToCell(CELL_RP_SP, byte.toHexByteString());
+
+            if ((this.cpu.memFlags[byte] & MEM_FLAG_WRITTEN)) {
+                writeToCell(CELL_SP_TOP, this.cpu.mem[byte].toHexByteString());
+            } else if (CELL_SP_TOP.firstChild) {
+                CELL_SP_TOP.firstChild.remove();
+            }
+            this.cpu.sp = byte;
+        }
+
+        readFlag(name) {
+            let result = this.cpu.flags[name];
+            if (result === undefined)
+                throw 'readUndefinedFlag';
+            if (result === null)
+                throw 'readNondeterministicFlag';
+            return result;
+        }
+
+        writeFlags(sign, zero, carry) {
+            let flags = this.cpu.flags;
+
+            if (flags.S !== sign)
+                writeToCell(CELL_FLAG_S, sign ? "1" : "0");
+            if (flags.Z !== zero)
+                writeToCell(CELL_FLAG_Z, zero ? "1" : "0");
+            if (flags.C !== carry)
+                writeToCell(CELL_FLAG_C, carry ? "1" : "0");
+
+            flags.S = sign;
+            flags.Z = zero;
+            flags.C = carry;
+        }
+
+        readFlagsAsByte() {
+            let fl = this.cpu.flags;
+            // flags are always all set at the same time, checking whether one flag is nondeterministic is enough
+            if (this.cpu.flags.Z === null)
+                throw 'readNondeterministicFlag';
+            return (+fl.S << 2) | (+fl.Z << 1) | (+fl.C);
+        }
+
+        writeFlagsAsByte(byte) {
+            let fl = this.cpu.flags;
+            fl.S = (byte & 0b100) !== 0;
+            fl.Z = (byte & 0b010) !== 0;
+            fl.C = (byte & 0b001) !== 0;
+        }
+
+        readProgramCounter() {
+            return this.cpu.pc;
+        }
+
+        _updateInstructionPreview() {
+            try {
+                let instructionObject = this.decodeNextInstruction(true);
+                writeToCell(CELL_PC_MNE, instructionObject ? format(instructionObject) : "???");
+            } catch (e) {
+                if (e === 'fetchNondeterministicInstruction') {
+                    if (CELL_PC_MNE.firstChild)
+                        CELL_PC_MNE.firstChild.remove();
+                } else throw e;
+            }
+        }
+
+        writeProgramCounter(pc) {
+            if (pc < 0 || pc > 0xFF)
+                throw "writeProgramCounterOutOfRange";
+            MEM_TABLE_ARRAY[this.cpu.pc].classList.remove("pc");
+            MEM_TABLE_ARRAY[pc].classList.add("pc");
+            writeToCell(CELL_RP_PC, pc.toHexByteString());
+
+            this.cpu.pc = pc;
+
+            this._updateInstructionPreview();
+        }
+
+        readMemory(address) {
+            if (address < 0 || address > 0xFF)
+                throw 'readOutOfRange';
+            if ((this.cpu.memFlags[address] & MEM_FLAG_WRITTEN) === 0)
+                throw 'readNondeterministicMemory';
+            return this.cpu.mem[address];
+        }
+
+        /**
+         * Writes to memory.
+         *
+         * @param address the 8-bit address to be written to
+         * @param byte the value to be written at the address
+         * @param flags the memory flags in a bit array number
+         */
+        writeMemory(address, byte, flags = MEM_FLAG_WRITTEN) {
+            if (address < 0 || address > 0xFF)
+                throw 'writeOutOfRange';
+
+            this.cpu.mem[address] = byte;
+            this.cpu.memFlags[address] = flags;
+
+            let cell = MEM_TABLE_ARRAY[address];
+            if (cell.firstChild)
+                cell.firstChild.remove();
+            if (flags & MEM_FLAG_WRITTEN)
+                cell.append(byte.toHexByteString());
+
+            cell.classList.remove("mem-cell-stack");
+            cell.classList.remove("mem-cell-heap");
+            cell.classList.remove("mem-cell-program");
+            if (flags & MEM_FLAG_PROGRAM)
+                cell.classList.add("mem-cell-program");
+            if (flags & MEM_FLAG_STACK)
+                cell.classList.add("mem-cell-stack");
+            if (flags & MEM_FLAG_HEAP)
+                cell.classList.add("mem-cell-heap");
+
+            if (address === this.cpu.pc || ((address - 1) & 0xFF) === this.cpu.pc) {
+                this._updateInstructionPreview();
+            }
+        }
+
+        writeHeapMemory(address, byte) {
+            this.writeMemory(address, byte, MEM_FLAG_WRITTEN | MEM_FLAG_HEAP);
+        }
+
+        pushMemory(byte) {
+            if (this.cpu.sp === null)
+                throw "pushMemoryBeforeStackPointerInit";
+            let newStackPointer = (this.cpu.sp - 1) & 0xFF;
+            this.writeMemory(newStackPointer, byte, MEM_FLAG_WRITTEN | MEM_FLAG_STACK);
+            this.writeRegisterPair(RP_8080.SP, newStackPointer);
+        }
+
+        popMemory() {
+            if (this.cpu.sp === null)
+                throw "popMemoryBeforeStackPointerInit";
+            let result = this.readMemory(this.cpu.sp);
+            this.writeRegisterPair(RP_8080.SP, (this.cpu.sp + 1) & 0xFF);
+            return result;
+        }
+
+    }
+
+    const CPU_CONTROLLER = new CPUController(CPU);
+    CPU_CONTROLLER.reset();
+
+    const PROGRAM = [];
+
+    /** All Intel 8080 register pairs including stack pointer */
+    const RP_8080 = {
+        BC: 0b00,
+        DE: 0b01,
+        HL: 0b10,
+        SP: 0b11
+    };
+
+    const RP_8080_NAMES = ['BC', 'DE', 'HL', 'SP'];
+
+    /** All Intel 8080 registers including memory reference and accumulator */
+    const REG_8080 = {
+        B: 0b000,
+        C: 0b001,
+        D: 0b010,
+        E: 0b011,
+        H: 0b100,
+        L: 0b101,
+        /** memory reference */
+        M: 0b110,
+        /** accumulator */
+        A: 0b111
+    };
+
+    const REG_8080_NAMES = ['B', 'C', 'D', 'E', 'H', 'L', 'M', 'A'];
+
+    /** Registers which can be used in stack operations such as PUSH and POP */
+    const REG_STACK = {
+        A: 0b11,
+        L: 0b10,
+        FL: 0xFF, // special value, not to be actually assembled
+    };
+
+    const REG_STACK_NAMES = {0b11: 'A', 0b10: 'L', 0xFF: 'FL'};
+
+    // noinspection JSUnusedGlobalSymbols
+    String.prototype.isDigit = function () {
+        return this >= '0' && this <= '9';
+    };
+
+    /** Regex of a label identifier without a colon at the end */
+    const LABEL_REGEX = /[@?]?[A-Z][0-9A-Z]*/;
+    /** Regex of a number provided in binary, octal, decimal or hexadecimal format */
+    const NUMBER_REGEX = /-?[01]+B|[0-7]+[OQ]|[0-9]+D?|[0-9A-F]+H/;
+
+    const STATEMENT_REGEX = new RegExp(
+        "^(" + LABEL_REGEX.source + ":)?" + // label (first group, contains colon)
+        "\\s*([A-Z]+)" + //                    opcode (second group, clean)
+        "(\\s+[-@?]?[A-Z0-9]+" + //            first operand (third group, contains both operands)
+        "(,[-@?]?[A-Z0-9]+)?)?$" //            second operand (fourth group, contains comma)
+    );
+
+    /** Operand types */
+    const OPERAND = {
+        CONST: {
+            regex: new RegExp("^(" + NUMBER_REGEX.source + ")$"),
+            parse(op) {
+                let maxIndex = op.length - 1;
+                let suffix = op[maxIndex];
+                switch (suffix) {
+                    case 'H':
+                        return parseInt(op.substring(0, maxIndex), 16);
+                    case 'D':
+                        return parseInt(op.substring(0, maxIndex), 10);
+                    case 'O':
+                    case 'Q':
+                        return parseInt(op.substring(0, maxIndex), 8);
+                    case 'B':
+                        return parseInt(op.substring(0, maxIndex), 2);
+                    default:
+                        return parseInt(op, 10);
+                }
+            },
+            fixRange: (str) => str & 0xFF, /*{
+                if (op >= 0)
+                    return op & 0xFF;
+                else return (~op & 0xFF) + 1; // two-complement mod 2^8
+            }*/
+            format: (op) => op.toHexByteString() + 'H',
+        },
+        ADDRESS: {
+            /** either a number (first group) or a label (second group) */
+            regex: new RegExp("^(" + NUMBER_REGEX.source + ")$|^(" + LABEL_REGEX.source + ")$"),
+            parse() {
+                throw "genericAddressParseCall"
+            },
+            parseLabel: (str, labelMap) => labelMap[str],
+            fixRange: (op) => op & 0xFF,
+            format: (op) => op.toHexByteString() + 'H',
+        },
+        // PC: {}, not yet supported
+        // ASCII: {}, not yet supported
+        REG: {
+            regex: /^[ALM]$/,
+            parse: (str) => REG_8080[str],
+            fixRange: (op) => (op >= 0 && op <= 0b111) ? op : null,
+            format: (op) => REG_8080_NAMES[op]
+        },
+
+        STACK_REG: {
+            regex: /^[AL]|FL$/,
+            parse: (str) => REG_STACK[str],
+            fixRange: (op) => (op >= 0 && op <= 0b11 || op === 0xFF) ? op : null,
+            format: (op) => REG_STACK_NAMES[op]
+        },
+
+        // LXI on the board can only write to the stack pointer
+        LXI_RP: {
+            regex: /^SP$/,
+            parse: (str) => RP_8080[str],
+            fixRange: (op) => op === RP_8080.SP ? op : null,
+            format: (op) => RP_8080_NAMES[op]
+        },
+
+        /*LABEL: {
+            regex: /^@?[A-Z][A-Z0-9]+$/,
+            fixRange: (op) => op & 0xFF
+        },*/
+        // EXPR: {} not yet supported
+    };
+
+    /**
+     * Standard procedures used by the instruction set.
+     *
+     * This class essentially contains helper methods that perform redundant tasks using the CPU-Controller.
+     * */
+    class INSTR_SET_PROCEDURES {
+
+        static uint8 = new Uint8Array(1);
+        static uint16 = new Uint16Array(1);
+
+        /**
+         * Pushes the address of the next instruction onto the stack (return address).
+         *
+         * This procedure is used in all (conditional) CALL instructions.
+         * */
+        static pushReturnAddress() {
+            // all instructions which use this method are 2 bytes long
+            let retAdr = (CPU_CONTROLLER.readProgramCounter() + 2) & 0xFF;
+            CPU_CONTROLLER.pushMemory(retAdr);
+        }
+
+        /**
+         * Jumps to the given address conditionally.
+         *
+         * @param address the address at which to continue execution
+         * @param flagName the name of the flag to be checked
+         * @param expected the expected value of the flag. If the value matches the expected one, a jump takes place.
+         */
+        static jumpConditional(address, flagName, expected = true) {
+            if (CPU_CONTROLLER.readFlag(flagName) === expected)
+                CPU_CONTROLLER.writeProgramCounter(address);
+            else // all jump instructions have a length of two bytes
+                CPU_CONTROLLER.writeProgramCounter((CPU_CONTROLLER.readProgramCounter() + 2) & 0xFF);
+        }
+
+        /**
+         * Jumps to the given address conditionally.
+         *
+         * If a jump does take place, a return address is pushed onto the stack.
+         *
+         * @param address the address at which to continue execution
+         * @param flagName the name of the flag to be checked
+         * @param expected the expected value of the flag. If the value matches the expected one, a jump takes place.
+         */
+        static callConditional(address, flagName, expected = true) {
+            if (CPU_CONTROLLER.readFlag(flagName) === expected) {
+                this.pushReturnAddress();
+                CPU_CONTROLLER.writeProgramCounter(address);
+            } else // all call instructions have a length of two bytes
+                CPU_CONTROLLER.writeProgramCounter((CPU_CONTROLLER.readProgramCounter() + 2) & 0xFF);
+        }
+
+        /**
+         * Performs a given arithmetic or logic operation and writes the result back into the accumulator.
+         *
+         * Additionally, all flags (S, Z, C) are set depending on the result of the operation.
+         *
+         * @param func the logic operation (number -> number)
+         * @param write whether the result should be written back into the accumulator
+         */
+        static aluOperation(func, write = true) {
+            this.uint16[0] = CPU_CONTROLLER.readRegister(REG_8080.A);
+            this.uint16[0] = func(this.uint16[0]);
+            this.uint8[0] = this.uint16[0];
+
+            let s = (this.uint8[0] & 0x80) !== 0;
+            let z = this.uint8[0] === 0;
+            let c = (this.uint16[0] & 0x100) !== 0;
+
+            if (write)
+                CPU_CONTROLLER.writeRegister(REG_8080.A, this.uint8[0]);
+            CPU_CONTROLLER.writeFlags(s, z, c);
+        }
+
+    }
+
+    /** instruction set of the SYBA TRONIC Intel 8080-like processor used in the experiment */
+    const INSTR_SET = {
+
+        // TRANSFER INSTRUCTIONS ---------------------------------------------------------------------------------------
+
+        /** MOV: 2-bit label | 3-bit dst | 3-bit src
+         *
+         * 8080: One byte of data is moved from the
+         * register specified by src (the source register) to the register
+         * specified by dst (the destination register). The data re-
+         * places the contents of the destination register; the source
+         * remains unchanged.
+         *
+         * 8080: When a memory reference is specified in the MOV in-
+         * struction, the addressed location is specified by the Hand L
+         * registers. The L register holds the least significant 8 bits of
+         * the address; the H register holds the most significant 8 bits.
+         */
+        MOV: {
+            oplab: 0b01000000, mask: 0b11000000, bytes: 1, operands: [OPERAND.REG, OPERAND.REG], children: {
+                MOV_A_L: 0x7D,
+                MOV_A_M: 0x7E,
+                MOV_M_A: 0x77,
+            },
+            assemble: (dst, src) => {
+                /*console.log()
+                console.log("MOV: " + INSTR_SET.MOV.oplab.toString(2).padStart(8, "0"));
+                console.log("MOV: dst=" + dst + ", src=" + src)*/
+                return [INSTR_SET.MOV.oplab | (dst << 3) | src];
+            },
+            exec(dst, src) {
+                let byte = CPU_CONTROLLER.readRegister(src);
+                CPU_CONTROLLER.writeRegister(dst, byte);
+            }
+        },
+
+        /** MVI: 2-bit label | 3-bit reg | 3-bit const | 8-bit data
+         *
+         * Move immediate data to register
+         * */
+        MVI: {
+            oplab: 0b00000110, mask: 0b11000111, bytes: 2, operands: [OPERAND.REG, OPERAND.CONST], children: {
+                MVI_A_n: 0x3E,
+                MVI_L_n: 0x2E
+            },
+            assemble: (reg, data) => {
+                //console.log("reg: " + reg.toString(2) + " data: " + data.toString(2).padStart(8, "0") + " -> " + )
+                return [INSTR_SET.MVI.oplab | (reg << 3), data];
+            },
+            exec(reg, data) {
+                CPU_CONTROLLER.writeRegister(reg, data);
+            }
+        },
+
+        /** LDA: 8-bit label | 8-bit adr
+         *
+         * Move contents of adr to accu
+         */
+        LDA: {
+            oplab: 0x3A, mask: 0xFF, bytes: 2, operands: [OPERAND.CONST], children: {
+                LDA: 0x3A
+            },
+            assemble: (adr) => {
+                return [INSTR_SET.LDA.oplab, adr];
+            },
+            exec(adr) {
+                let byte = CPU_CONTROLLER.readMemory(adr);
+                CPU_CONTROLLER.writeRegister(REG_8080.A, byte);
+            }
+        },
+
+        /** LDA: 8-bit label | 8-bit adr
+         *
+         * Move accu to contents of adr
+         */
+        STA: {
+            oplab: 0x32, mask: 0xFF, bytes: 2, operands: [OPERAND.CONST], children: {
+                LDA: 0x32
+            },
+            assemble: (adr) => {
+                return [INSTR_SET.STA.oplab, adr];
+            },
+            exec(adr) {
+                let byte = CPU_CONTROLLER.readRegister(REG_8080.A);
+                CPU_CONTROLLER.writeHeapMemory(adr, byte);
+            }
+        },
+
+        /** LXI: 2-bit label | 2-bit rp | 4-bit const | 8-bit data
+         *
+         * Move immediate data to rp (only SP allowed)
+         */
+        LXI: {
+            oplab: 0b00000001, mask: 0b11001111, bytes: 2, operands: [OPERAND.LXI_RP, OPERAND.CONST], children: {
+                LXI_SP_n: 0x31
+            },
+            assemble: (rp, data) => {
+                return [INSTR_SET.LXI.oplab | (rp << 4), data];
+            },
+            exec(rp, data) {
+                CPU_CONTROLLER.writeRegisterPair(rp, data);
+            }
+        },
+
+        /** PUSH: 2-bit label | 2-bit rp | 4-bit const
+         *
+         * Decrement SP, move rp to stack.
+         *
+         * rp:
+         * 00 -> B and C (8080 only)
+         * 01 -> D and E (8080 only)
+         * 10 -> L or flags (PUSH FL if const suffix = 1101 instead)
+         * 11 -> A
+         *
+         * NOTE: PUSH FL doesn't exist in 8080
+         */
+        PUSH: {
+            oplab: 0b11000101, mask: 0b11001111, bytes: 1, operands: [OPERAND.STACK_REG],
+            children: {
+                PUSH_A: 0xF5,
+                PUSH_L: 0xE5,
+                PUSH_FL: 0xED
+            },
+            assemble: (rp) => {
+                return rp === REG_STACK.FL ?
+                    [INSTR_SET.PUSH.children.PUSH_FL] :
+                    [INSTR_SET.PUSH.oplab | (rp << 4)];
+            }, exec(rp) {
+                let byte = 0;
+                switch (rp) {
+                    case REG_STACK.A:
+                        byte = CPU_CONTROLLER.readRegister(REG_8080.A);
+                        break;
+                    case REG_STACK.L:
+                        byte = CPU_CONTROLLER.readRegister(REG_8080.L);
+                        break;
+                    case REG_STACK.FL:
+                        byte = CPU_CONTROLLER.readFlagsAsByte();
+                        break;
+                }
+                CPU_CONTROLLER.pushMemory(byte);
+            }
+        },
+
+        /** PUSH: 2-bit label | 2-bit rp | 4-bit const
+         *
+         * Move stack to rp, increment SP.
+         *
+         * rp:
+         * 00 -> B and C (8080 only)
+         * 01 -> D and E (8080 only)
+         * 10 -> L
+         * 11 -> A or flags (POP FL if const suffix = 1101 instead)
+         *
+         * NOTE: PUSH FL doesn't exist in 8080
+         */
+        POP: {
+            oplab: 0b11000001, mask: 0b11001111, bytes: 1, operands: [OPERAND.STACK_REG],
+            children: {
+                POP_A: 0xF1,
+                POP_L: 0xE1,
+                POP_FL: 0xFD
+            },
+            assemble: (rp) => {
+                return rp === REG_STACK.FL ?
+                    [INSTR_SET.POP.children.POP_FL] :
+                    [INSTR_SET.POP.oplab | (rp << 4)];
+            }, exec(rp) {
+                let byte = CPU_CONTROLLER.popMemory();
+                switch (rp) {
+                    case REG_STACK.A:
+                        CPU_CONTROLLER.writeRegister(REG_8080.A, byte);
+                        break;
+                    case REG_STACK.L:
+                        CPU_CONTROLLER.writeRegister(REG_8080.L, byte);
+                        break;
+                    case REG_STACK.FL:
+                        CPU_CONTROLLER.writeFlagsAsByte(byte);
+                        break;
+                }
+            }
+        },
+
+        // INPUT/OUTPUT INSTRUCTIONS -----------------------------------------------------------------------------------
+
+        /** IN: 8-bit label | 8-bit port adr
+         *
+         * Move accumulator to port address? Should be move port to accu
+         */
+        IN: {
+            oplab: 0xDB, mask: 0xFF, bytes: 2, operands: [OPERAND.CONST],
+            assemble: (port) => {
+                return [INSTR_SET.IN.oplab, port];
+            },
+            exec(port) {
+                console.log("read from port " + port)
+            }
+        },
+
+        /** IN: 8-bit label | 8-bit port adr
+         *
+         * Move port address to accumulator? Should be move accu to port
+         */
+        OUT: {
+            oplab: 0xD3, mask: 0xFF, bytes: 2, operands: [OPERAND.CONST],
+            assemble: (port) => {
+                return [INSTR_SET.OUT.oplab, port];
+            },
+            exec(port) {
+                console.log("write " + CPU_CONTROLLER.readRegister(REG_8080.A) + " to port " + port)
+            }
+        },
+
+        // ARITHMETIC INSTRUCTIONS
+
+        /** INR: 2-bit label | 3-bit reg | 3-bit const
+         *
+         * Increment register or memory
+         */
+        INR: {
+            oplab: 0b00000100, mask: 0b11000111, bytes: 1, operands: [OPERAND.REG],
+            assemble: (reg) => {
+                return [INSTR_SET.INR.oplab | (reg << 3)];
+            },
+            exec(reg) {
+                if (reg === REG_8080.A)
+                    INSTR_SET_PROCEDURES.aluOperation(alu => alu + 1);
+                else {
+                    INSTR_SET_PROCEDURES.uint8[0] = CPU_CONTROLLER.readRegister(reg);
+                    ++INSTR_SET_PROCEDURES.uint8[0];
+                    CPU_CONTROLLER.writeRegister(reg, INSTR_SET_PROCEDURES.uint8[0]);
+                }
+            }
+        },
+
+        /** DCR: 2-bit label | 3-bit reg | 3-bit const
+         *
+         * Decrement register or memory
+         */
+        DCR: {
+            oplab: 0b00000101, mask: 0b11000111, bytes: 1, operands: [OPERAND.REG],
+            assemble: (reg) => {
+                return [INSTR_SET.DCR.oplab | (reg << 3)];
+            },
+            exec(reg) {
+                if (reg === REG_8080.A)
+                    INSTR_SET_PROCEDURES.aluOperation(alu => alu - 1);
+                else {
+                    INSTR_SET_PROCEDURES.uint8[0] = CPU_CONTROLLER.readRegister(reg);
+                    --INSTR_SET_PROCEDURES.uint8[0];
+                    CPU_CONTROLLER.writeRegister(reg, INSTR_SET_PROCEDURES.uint8[0]);
+                }
+            }
+        },
+
+        /** ADD: 2-bit label | 3-bit const | 3-bit reg
+         *
+         * Add register to accumulator
+         */
+        ADD: {
+            oplab: 0b10000000, mask: 0b11111000, bytes: 1, operands: [OPERAND.REG],
+            assemble: (reg) => {
+                return [INSTR_SET.ADD.oplab | reg];
+            },
+            exec(reg) {
+                INSTR_SET_PROCEDURES.aluOperation(alu => alu + CPU_CONTROLLER.readRegister(reg));
+            }
+        },
+
+        /** ADI: 8-bit label | 8-bit data
+         *
+         * Add data to accumulator
+         */
+        ADI: {
+            oplab: 0xC6, mask: 0xFF, bytes: 2, operands: [OPERAND.CONST],
+            assemble: (data) => {
+                return [INSTR_SET.ADI.oplab, data];
+            },
+            exec(data) {
+                INSTR_SET_PROCEDURES.aluOperation(alu => alu + data);
+            }
+        },
+
+        /** ADD: 2-bit label | 3-bit const | 3-bit reg
+         *
+         * Subtract register from accumulator
+         */
+        SUB: {
+            oplab: 0b10010000, mask: 0b11111000, bytes: 1, operands: [OPERAND.REG],
+            assemble: (reg) => {
+                return [INSTR_SET.SUB.oplab | reg];
+            },
+            exec(reg) {
+                INSTR_SET_PROCEDURES.aluOperation(alu => alu - CPU_CONTROLLER.readRegister(reg));
+            }
+        },
+
+        /** SUI: 8-bit label | 8-bit data
+         *
+         * Subtract data from accumulator
+         */
+        SUI: {
+            oplab: 0xD6, mask: 0xFF, bytes: 2, operands: [OPERAND.CONST],
+            assemble: (data) => {
+                return [INSTR_SET.SUI.oplab, data];
+            },
+            exec(data) {
+                INSTR_SET_PROCEDURES.aluOperation(alu => alu - data);
+            }
+        },
+
+        /** CMP: 2-bit label | 3-bit code for CMP | 3-bit reg
+         *
+         * Compare register or memory with accumulator
+         */
+        CMP: {
+            oplab: 0b10111000, mask: 0b11111000, bytes: 1, operands: [OPERAND.REG],
+            assemble: (reg) => {
+                return [INSTR_SET.CMP.oplab | reg];
+            },
+            exec(reg) {
+                INSTR_SET_PROCEDURES.aluOperation(alu => alu - CPU_CONTROLLER.readRegister(reg), false);
+            }
+        },
+
+        /** CPI: 8-bit label | 8-bit data
+         *
+         * Compare register or memory with accumulator
+         */
+        CPI: {
+            oplab: 0xFE, mask: 0xFF, bytes: 2, operands: [OPERAND.CONST],
+            assemble: (data) => {
+                return [INSTR_SET.CPI.oplab, data];
+            },
+            exec(data) {
+                INSTR_SET_PROCEDURES.aluOperation(alu => alu - data, false);
+            }
+        },
+
+        // LOGIC INSTRUCTIONS ------------------------------------------------------------------------------------------
+
+        /** ANA: 2-bit label for log op | 3-bit label for AND | 3-bit reg
+         *
+         * Bitwise AND between accumulator and register
+         */
+        ANA: {
+            oplab: 0b10100000, mask: 0b11111000, bytes: 1, operands: [OPERAND.REG],
+            assemble: (reg) => {
+                return [INSTR_SET.ANA.oplab | reg];
+            },
+            exec(reg) {
+                INSTR_SET_PROCEDURES.aluOperation(alu => alu & CPU_CONTROLLER.readRegister(reg));
+            }
+        },
+
+        /** IN: 2-bit label for im. log op | 3-bit label for ANI | 3-bit const
+         *
+         * Bitwise AND between accumulator and data
+         */
+        ANI: {
+            oplab: 0xE6, mask: 0xFF, bytes: 2, operands: [OPERAND.CONST],
+            assemble: (data) => {
+                return [INSTR_SET.ANI.oplab, data];
+            },
+            exec(data) {
+                INSTR_SET_PROCEDURES.aluOperation(alu => alu & data);
+            }
+        },
+
+        /** ORA: 2-bit label for log op | 3-bit label for OR | 3-bit reg
+         *
+         * Bitwise OR between accumulator and register
+         */
+        ORA: {
+            oplab: 0b10110000, mask: 0b11111000, bytes: 1, operands: [OPERAND.REG],
+            assemble: (reg) => {
+                return [INSTR_SET.ORA.oplab | reg];
+            },
+            exec(reg) {
+                INSTR_SET_PROCEDURES.aluOperation(alu => alu | CPU_CONTROLLER.readRegister(reg));
+            }
+        },
+
+        /** IN: 2-bit label for im. log op | 3-bit label for ORI | 3-bit const | 8-bit dat
+         *
+         * Bitwise OR between accumulator and data
+         */
+        ORI: {
+            oplab: 0xF6, mask: 0xFF, bytes: 2, operands: [OPERAND.CONST],
+            assemble: (data) => {
+                return [INSTR_SET.ORI.oplab, data];
+            },
+            exec(data) {
+                INSTR_SET_PROCEDURES.aluOperation(alu => alu | data);
+            }
+        },
+
+        /** XRA: 2-bit label for log op | 3-bit label for XOR | 3-bit reg
+         *
+         * Bitwise XOR between accumulator and register
+         */
+        XRA: {
+            oplab: 0b10101000, mask: 0b11111000, bytes: 1, operands: [OPERAND.REG],
+            assemble: (reg) => {
+                return [INSTR_SET.XRA.oplab | reg];
+            },
+            exec(reg) {
+                INSTR_SET_PROCEDURES.aluOperation(alu => alu ^ CPU_CONTROLLER.readRegister(reg));
+            }
+        },
+
+        /** XRI: 2-bit label for im. log op | 3-bit label for XRI | 3-bit const | 8-bit data
+         *
+         * Bitwise XOR between accumulator and data
+         */
+        XRI: {
+            oplab: 0xEE, mask: 0xFF, bytes: 2, operands: [OPERAND.CONST],
+            assemble: (data) => {
+                return [INSTR_SET.XRI.oplab, data];
+            },
+            exec(data) {
+                INSTR_SET_PROCEDURES.aluOperation(alu => alu ^ data);
+            }
+        },
+
+        // BRANCH INSTRUCTIONS
+
+        /** IN: 8-bit label| 8-bit adr
+         *
+         * Jump unconditional
+         */
+        JMP: {
+            oplab: 0xC3, mask: 0xFF, bytes: 2, manualPC: true, operands: [OPERAND.ADDRESS],
+            assemble: (adr) => [INSTR_SET.JMP.oplab, adr],
+            exec(adr) {
+                CPU_CONTROLLER.writeProgramCounter(adr);
+            }
+        },
+
+        /** IN: 8-bit label | 8-bit adr
+         *
+         * Jump if zero-flag is set
+         */
+        JZ: {
+            oplab: 0xCA, mask: 0xFF, bytes: 2, manualPC: true, operands: [OPERAND.ADDRESS],
+            assemble: (adr) => [INSTR_SET.JZ.oplab, adr],
+            exec(adr) {
+                INSTR_SET_PROCEDURES.jumpConditional(adr, 'Z', true);
+            }
+        },
+
+        /** IN: 8-bit label | 8-bit adr
+         *
+         * Jump if zero-flag is not set
+         */
+        JNZ: {
+            oplab: 0xC2, mask: 0xFF, bytes: 2, manualPC: true, operands: [OPERAND.ADDRESS],
+            assemble: (adr) => [INSTR_SET.JNZ.oplab, adr],
+            exec(adr) {
+                INSTR_SET_PROCEDURES.jumpConditional(adr, 'Z', false);
+            }
+        },
+
+        /** IN: 8-bit label | 8-bit adr
+         *
+         * Jump if carry-flag is set
+         */
+        JC: {
+            oplab: 0xDA, mask: 0xFF, bytes: 2, manualPC: true, operands: [OPERAND.ADDRESS],
+            assemble: (adr) => [INSTR_SET.JC.oplab, adr],
+            exec(adr) {
+                INSTR_SET_PROCEDURES.jumpConditional(adr, 'C', true);
+            }
+        },
+
+        /** IN: 8-bit label | 8-bit adr
+         *
+         * Jump if carry-flag is not set
+         */
+        JNC: {
+            oplab: 0xD2, mask: 0xFF, bytes: 2, manualPC: true, operands: [OPERAND.ADDRESS],
+            assemble: (adr) => [INSTR_SET.JNC.oplab, adr],
+            exec(adr) {
+                INSTR_SET_PROCEDURES.jumpConditional(adr, 'C', false);
+            }
+        },
+
+        /** IN: 8-bit label | 8-bit adr
+         *
+         * Call unconditional
+         */
+        CALL: {
+            oplab: 0xCD, mask: 0xFF, bytes: 2, manualPC: true, operands: [OPERAND.ADDRESS],
+            assemble: (adr) => [INSTR_SET.CALL.oplab, adr],
+            exec(adr) {
+                INSTR_SET_PROCEDURES.pushReturnAddress();
+                CPU_CONTROLLER.writeProgramCounter(adr);
+            }
+        },
+
+        /** IN: 8-bit label | 8-bit adr
+         *
+         * Call if zero-flag is set
+         */
+        CZ: {
+            oplab: 0xCC, mask: 0xFF, bytes: 2, manualPC: true, operands: [OPERAND.ADDRESS],
+            assemble: (adr) => [INSTR_SET.CZ.oplab, adr],
+            exec(adr) {
+                INSTR_SET_PROCEDURES.callConditional(adr, 'Z', true);
+            }
+        },
+
+        /** IN: 8-bit label | 8-bit adr
+         *
+         * Call unconditional
+         */
+        CNZ: {
+            oplab: 0xC4, mask: 0xFF, bytes: 2, manualPC: true, operands: [OPERAND.ADDRESS],
+            assemble: (adr) => [INSTR_SET.CNZ.oplab, adr],
+            exec(adr) {
+                INSTR_SET_PROCEDURES.callConditional(adr, 'Z', false);
+            }
+        },
+
+        /** IN: 8-bit label | 8-bit adr
+         *
+         * Call if carry-flag is set
+         */
+        CC: {
+            oplab: 0xDC, mask: 0xFF, bytes: 2, manualPC: true, operands: [OPERAND.ADDRESS],
+            assemble: (adr) => [INSTR_SET.CC.oplab, adr],
+            exec(adr) {
+                INSTR_SET_PROCEDURES.callConditional(adr, 'C', true);
+            }
+        },
+
+        /** IN: 8-bit label | 8-bit adr
+         *
+         * Call if carry-flag is set
+         */
+        CNC: {
+            oplab: 0xD4, mask: 0xFF, bytes: 2, manualPC: true, operands: [OPERAND.ADDRESS],
+            assemble: (adr) => [INSTR_SET.CNC.oplab, adr],
+            exec(adr) {
+                INSTR_SET_PROCEDURES.callConditional(adr, 'C', false);
+            }
+        },
+
+        /** IN: 8-bit label
+         *
+         * Return (decrement SP, then jump to address at SP)
+         */
+        RET: {
+            oplab: 0xC9, mask: 0xFF, bytes: 1, manualPC: true, operands: [],
+            exec() {
+                let retAdr = CPU_CONTROLLER.popMemory();
+                CPU_CONTROLLER.writeProgramCounter(retAdr);
+            }
+        },
+
+        // SPECIAL INSTRUCTIONS ----------------------------------------------------------------------------------------
+
+        /** IN: 8-bit label
+         *
+         * Halt
+         */
+        HLT: {
+            oplab: 0x76, mask: 0xFF, bytes: 1, operands: [],
+            exec() {
+                CPU_CONTROLLER.halt()
+            }
+        },
+
+        /** IN: 8-bit label
+         *
+         * No operations
+         */
+        NOP: {
+            oplab: 0x00, mask: 0xFF, bytes: 1, operands: [],
+            exec() {/* No operation */
+            }
+        },
+
+        /** IN: 8-bit label
+         *
+         * Enable Interrupt
+         */
+        EI: {
+            oplab: 0xFB, mask: 0xFF, bytes: 1, operands: [],
+            exec() {
+                CPU_CONTROLLER.enableInterrupt()
+            }
+        },
+
+        /** IN: 8-bit label
+         *
+         * Disable Interrupt
+         */
+        DI: {
+            oplab: 0xF3, mask: 0xFF, bytes: 1, operands: [],
+            exec() {
+                CPU_CONTROLLER.disableInterrupt()
+            }
+        },
+
+        // DATA STATEMENTS ---------------------------------------------------------------------------------------------
+
+        /** DB: 8-bit data
+         *
+         * Define Byte(s) of Data
+         */
+        DB: {
+            oplab: 0, mask: 0, bytes: 1, operands: [OPERAND.CONST],
+            assemble: (byte) => [byte]
+        },
+
+        // PSEUDO-INSTRUCTIONS -----------------------------------------------------------------------------------------
+
+        /** Pseudo-Instruction for setting the origin in program code of the following instruction */
+        ORG: {
+            pseudo: true, operands: [OPERAND.CONST]
+        }
+
+    };
+
+    /** Lookup table of concrete instruction in "register or memory to accumulator instructions" */
+    const ALU_INSTR = [
+        INSTR_SET.ADD,
+        null, // ADC, 8080 only
+        INSTR_SET.SUB,
+        null, // SBB, 8080 only
+
+        INSTR_SET.ANA,
+        INSTR_SET.XRA,
+        INSTR_SET.ORA,
+        INSTR_SET.CMP
+    ];
+
+    /** Lookup table for concrete arithmetic or logic instruction in "immediate instructions" */
+    const ALUI_INSTR = [
+        INSTR_SET.ADI,
+        null, // ACI, 8080 only
+        INSTR_SET.SUI,
+        null, // SBI, 808 only
+
+        INSTR_SET.ANI,
+        INSTR_SET.XRI,
+        INSTR_SET.ORI,
+        INSTR_SET.CPI
+    ];
+
+    for (let instructionName in INSTR_SET) {
+        INSTR_SET[instructionName].name = instructionName;
+    }
+
+    /**
+     * Decodes the instruction in the given byte array at the offset.
+     *
+     * @param bytes the byte array
+     * @param offset the offset in the byte array (default = 0)
+     * @return {{instruction: INSTR_SET, operands: [number]} | null}
+     */
+    function decode(bytes, offset = 0) {
+        let first = bytes[offset];
+        let secnd = bytes[offset + 1];
+
+        let instruction = null;
+        let operands = null;
+
+        outer: switch ((first >>> 6) & 0b11) {
+
+            case 0b00: {
+                // decisions which require full lookup
+                if (first === 0) {
+                    instruction = INSTR_SET.NOP;
+                    operands = [];
+                    break;
+                } else if (first === INSTR_SET.LDA.oplab) {
+                    instruction = INSTR_SET.LDA;
+                    operands = [secnd];
+                    break;
+                } else if (first === INSTR_SET.STA.oplab) {
+                    instruction = INSTR_SET.STA;
+                    operands = [secnd];
+                    break;
+                }
+
+                let lo4 = first & 0b1111;
+
+                if (lo4 === 0b0001) {
+                    instruction = INSTR_SET.LXI;
+                    operands = [(first >>> 4) & 0b11, secnd];
+                    break;
+                }
+
+                let lo3 = first & 0b0111;
+
+                if (lo3 === 0b110) {
+                    instruction = INSTR_SET.MVI;
+                    operands = [(first >>> 3) & 0b111, secnd];
+                } else if (lo3 === 0b100) {
+                    instruction = INSTR_SET.INR;
+                    operands = [(first >>> 3) & 0b111];
+                } else if (lo3 === 0b101) {
+                    instruction = INSTR_SET.DCR;
+                    operands = [(first >>> 3) & 0b111];
+                } else return null; // return null for all other unknown cases, else break
+                break;
+            }
+
+            case 0b01:
+                // HLT is equivalent to MOV M,M
+                if (first === 0x76) {
+                    instruction = INSTR_SET.HLT;
+                    operands = [];
+                    break;
+                }
+
+                let dst = (first >>> 3) & 0b111;
+                let src = first & 0b111;
+                instruction = INSTR_SET.MOV;
+                operands = [dst, src];
+                break; // all instructions are covered, we can safely break
+
+
+            case 0b10:
+                instruction = ALU_INSTR[(first >>> 3) & 0b111];
+                if (!instruction)
+                    return null;
+                operands = [first & 0b111];
+                break; // all instructions are covered, we can safely break
+
+            case 0b11: {
+                switch (first) {
+                    // branch instructions
+                    case INSTR_SET.JMP.oplab:
+                        instruction = INSTR_SET.JMP;
+                        operands = [secnd];
+                        break outer;
+                    case INSTR_SET.JZ.oplab:
+                        instruction = INSTR_SET.JZ;
+                        operands = [secnd];
+                        break outer;
+                    case INSTR_SET.JNZ.oplab:
+                        instruction = INSTR_SET.JNZ;
+                        operands = [secnd];
+                        break outer;
+                    case INSTR_SET.JC.oplab:
+                        instruction = INSTR_SET.JC;
+                        operands = [secnd];
+                        break outer;
+                    case INSTR_SET.JNC.oplab:
+                        instruction = INSTR_SET.JNC;
+                        operands = [secnd];
+                        break outer;
+
+                    case INSTR_SET.CALL.oplab:
+                        instruction = INSTR_SET.CALL;
+                        operands = [secnd];
+                        break outer;
+                    case INSTR_SET.CZ.oplab:
+                        instruction = INSTR_SET.CZ;
+                        operands = [secnd];
+                        break outer;
+                    case INSTR_SET.CNZ.oplab:
+                        instruction = INSTR_SET.CNZ;
+                        operands = [secnd];
+                        break outer;
+                    case INSTR_SET.CC.oplab:
+                        instruction = INSTR_SET.CC;
+                        operands = [secnd];
+                        break outer;
+                    case INSTR_SET.CNC.oplab:
+                        instruction = INSTR_SET.CNC;
+                        operands = [secnd];
+                        break outer;
+
+                    case INSTR_SET.RET.oplab:
+                        instruction = INSTR_SET.RET;
+                        operands = [secnd];
+                        break outer;
+
+
+                    // special instructions
+                    case INSTR_SET.IN.oplab:
+                        instruction = INSTR_SET.IN;
+                        operands = [secnd];
+                        break outer;
+                    case INSTR_SET.OUT.oplab:
+                        instruction = INSTR_SET.OUT;
+                        operands = [secnd];
+                        break outer;
+                    case INSTR_SET.EI.oplab:
+                        instruction = INSTR_SET.EI;
+                        operands = [];
+                        break outer;
+                    case INSTR_SET.DI.oplab:
+                        instruction = INSTR_SET.DI;
+                        operands = [];
+                        break outer;
+                }
+
+                let lo3 = first & 0b111;
+                if (lo3 === 0b110) {
+                    instruction = ALUI_INSTR[(first >>> 3) & 0b111];
+                    if (!instruction)
+                        return null;
+                    operands = [secnd];
+                    break;
+                }
+
+                let lo4 = first & 0b1111;
+                if (lo4 === 0b0101) {
+                    instruction = INSTR_SET.PUSH;
+                    operands = [(first >>> 4) & 0b11];
+                } else if (lo4 === 0b0001) {
+                    instruction = INSTR_SET.POP;
+                    operands = [(first >>> 4) & 0b11];
+                } else if (lo4 === 0b1101) {
+                    let rp = (first >>> 4) & 0b11;
+                    if (rp === 0b10) {
+                        instruction = INSTR_SET.PUSH;
+                        operands = [REG_STACK.FL]; // special value for PUSH FL
+                    } else if (rp === 0b11) {
+                        instruction = INSTR_SET.POP;
+                        operands = [REG_STACK.FL]; // special value for POP FL
+                    }
+                } else return null; // return null for all other unknown cases, else break
+                break;
+            }
+        }
+
+        return {instruction: instruction, operands: operands}
+    }
+
+    function preprocessLine(index, line) {
+        line = line.trim();
+        if (line.length === 0)
+            return null;
+
+        let commentIndex = line.indexOf(';');
+        if (commentIndex === -1)
+            return {index: index, line: line.toUpperCase()};
+        line = line.substring(0, commentIndex).trim();
+
+        return line.length === 0 ? null : {index: index, line: line.toUpperCase()};
+    }
+
+    function tokenizeLineData(index, line) {
+        let match = STATEMENT_REGEX.exec(line);
+        //console.log(match);
+        if (!match)
+            return null;
+
+        let opcode = INSTR_SET[match[2]];
+        if (!opcode) // not a valid instruction
+            return null;
+
+        // address label for jumps
+        let label = (match[1] === undefined) ? null : match[1].substring(0, match[1].length - 1);
+        let operands = [];
+        // operands exist
+        if (match[3]) {
+            // two-operand
+            if (match[4]) {
+                let ops = match[3].trim().split(',');
+                operands.push(ops[0]);
+                operands.push(ops[1]);
+            }
+            // single-operand
+            else {
+                operands.push(match[3].trim());
+            }
+        }
+
+        return {
+            index: index,
+            opcode: opcode,
+            label: label,
+            operands: operands
+        };
+    }
+
+    function tokenizeLine(index, line) {
+        let tokenizedMnemonic = tokenizeLineData(index, line);
+        if (!tokenizedMnemonic) {
+            GUTTER.childNodes[index].className = "line-error";
+            return null;
+        }
+
+        GUTTER.childNodes[index].className = "line-tokenized";
+        return tokenizedMnemonic;
+    }
+
+    function parseMnemonic(mnemonic, labelMap) {
+        let instruction = mnemonic.opcode;
+        if (!instruction) {
+            return null;
+        }
+        let requiredOperands = instruction.operands;
+        if (requiredOperands.length !== mnemonic.operands.length) {
+            return null;
+        }
+
+        let resultOperands = [];
+        let index = 0;
+        for (let reqOp of requiredOperands) {
+            let operandToBeParsed = mnemonic.operands[index];
+
+            let match = reqOp.regex.exec(operandToBeParsed);
+            if (!match)
+                return null;
+
+            let parsedOperand = null;
+            if (reqOp === OPERAND.ADDRESS) {
+                // special case for address operands in order to modularize their parsing process
+                // addresses can either be a constant or a label, in the first case they are parsed as constants
+                // in the latter case, the labelMap is passed in additionally
+                parsedOperand = match[1] ?
+                    OPERAND.CONST.parse(operandToBeParsed) :
+                    OPERAND.ADDRESS.parseLabel(operandToBeParsed, labelMap);
+            } else {
+                // standard case for all other operands
+                parsedOperand = reqOp.parse(operandToBeParsed);
+            }
+            // parsing operand failed, happens when matches regex but some other requirement failed
+            if (parsedOperand == null) {
+                return null;
+            }
+            // fixing range failed, happens i.e. when a register greater than 0b111 is specified
+            else if ((parsedOperand = reqOp.fixRange(parsedOperand)) == null) {
+                return null;
+            } else
+                resultOperands.push(parsedOperand);
+
+            index++;
+        }
+
+        // noinspection UnnecessaryLocalVariableJS
+        let className = mnemonic.opcode.pseudo ? "line-pseudo" : "line-parsed";
+        GUTTER.childNodes[mnemonic.index].className = className;
+        return {
+            index: mnemonic.index,
+            address: mnemonic.address,
+            instruction: instruction,
+            operands: resultOperands,
+        }
+    }
+
+    function assemble(parsed) {
+        let instruction = parsed.instruction;
+        switch (instruction.operands.length) {
+            case 0:
+                return [instruction.oplab];
+            case 1:
+                return instruction.assemble(parsed.operands[0]);
+            case 2:
+                return instruction.assemble(parsed.operands[0], parsed.operands[1]);
+            default:
+                return null;
+        }
+    }
+
+    function format(parsed) {
+        let instruction = parsed.instruction;
+
+        let name = instruction.name;
+        let argstring = "";
+
+        if (instruction.operands.length >= 1) {
+            argstring += " " + instruction.operands[0].format(parsed.operands[0]);
+            if (instruction.operands.length >= 2) {
+                argstring += "," + instruction.operands[1].format(parsed.operands[1]);
+            }
+        }
+
+        return name + argstring;
+    }
+
+    function doParseEditor() {
+        clearGutters();
+
+        let preprocessed = [];
+        let tokenized = [];
+        let parsed = [];
+        let assembled = [];
+        let labels = {};
+
+        // preprocess pass (remove comments, empty lines, trailing whitespace, capitalize all)
+        let index = 0;
+        for (let line of EDITOR.value.lines()) {
+            let processedLine = preprocessLine(index, line);
+            if (processedLine) {
+                preprocessed.push(processedLine);
+            }
+            index++;
+        }
+
+        // first pass (tokenize, memorize labels)
+        let address = 0;
+        for (let processedLine of preprocessed) {
+            let tokenizedLine = tokenizeLine(processedLine.index, processedLine.line);
+            if (tokenizedLine) {
+                if (tokenizedLine.opcode === INSTR_SET.ORG) {
+                    let parsedLine = parseMnemonic(tokenizedLine, labels);
+                    if (parsedLine) {
+                        address = parsedLine.operands[0];
+                    }
+                    continue;
+                }
+                // give the object an additional address property for later passes
+                tokenizedLine.address = address;
+                if (tokenizedLine.label) {
+                    labels[tokenizedLine.label] = address;
+                }
+                address += tokenizedLine.opcode.bytes;
+                tokenized.push(tokenizedLine);
+            }
+        }
+
+        // second pass
+        for (let mnemonic of tokenized) {
+            let parsedLine = parseMnemonic(mnemonic, labels);
+            if (parsedLine)
+                parsed.push(parsedLine);
+        }
+
+        // third pass
+        for (let parsedLine of parsed) {
+            //console.log(parsedLine)
+            let index = parsedLine.index;
+            let asmBytes = assemble(parsedLine);
+            let address = parsedLine.address;
+            let adr = (address).toHexByteString() + " " +
+                (asmBytes.length === 2 ? (address + 1).toHexByteString() : "  ");
+            let bin = asmBytes[0].toBinByteString() + " " +
+                (asmBytes.length === 2 ? asmBytes[1].toBinByteString() : "        ");
+            let hex = asmBytes[0].toHexByteString() + " " +
+                (asmBytes.length === 2 ? asmBytes[1].toHexByteString() : "  ");
+            assembled.push({index: index, address: address, bytes: asmBytes});
+            //console.log(asmBytes);
+            //continue;
+            ADR.replaceChild(createContainer("pre", adr), ADR.children[index]);
+            BIN.replaceChild(createContainer("pre", bin), BIN.children[index]);
+            HEX.replaceChild(createContainer("pre", hex), HEX.children[index]);
+
+            // for debug purposes, the bytes are decoded and then reassembled
+            {
+                /* let asmBytesAgain = assemble(decode(asmBytes));
+                let deb = asmBytesAgain[0].toString(16).padStart(2, "0") + " " +
+                    (asmBytesAgain.length === 2 ? asmBytesAgain[1].toString(16).padStart(2, "0") : "  "); */
+                let decodedBytes = decode(asmBytes);
+                let mnemonic = "???        ";
+                if (decodedBytes) try {
+                    mnemonic = format(decodedBytes).padEnd(11, " ");
+                } catch (e) {
+                }
+
+                // DEB.replaceChild(createContainer("pre", mnemonic), DEB.children[index]); TODO add if-clause
+            }
+        }
+
+        PROGRAM.length = 0;
+        for (let a of assembled)
+            PROGRAM.push(a);
+    }
+</script>
+
+</body>
+</html>
+
