@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -375,7 +376,12 @@
             min-width: 3em;
             text-align: center;
         }
-
+		
+		.addr {
+            outline: 3px solid #62e03b;
+            outline-offset: -2px;
+        }
+		
         .pc {
             outline: 3px solid #bd31bd;
             outline-offset: -2px;
@@ -427,65 +433,42 @@
 </header>
 
 <div id="content">
-    <h2>EDITOR</h2>
-    <hr>
-    <table id="edit-table" style="border-spacing: 0">
-        <tr>
-            <th class="gutter-head">Line</th>
-            <th class="gutter-head">ADR</th>
-            <th class="gutter-head">BIN</th>
-            <th class="gutter-head">HEX</th>
-            <th class="gutter-head">DEB</th>
-            <th id="position" class="gutter-head" style="text-align: right">@ 0</th>
-        </tr>
-        <tr id="edit-row">
-            <td id="gutter-container">
-                <div id="gutter" class="gutter-content"></div>
-            </td>
-
-            <td id="adr-container">
-                <div id="adr" class="gutter-content">
-                    <pre>     </pre>
-                </div>
-            </td>
-            <td id="bin-container">
-                <div id="bin" class="gutter-content">
-                    <pre>                 </pre>
-                </div>
-            </td>
-            <td id="hex-container">
-                <div id="hex" class="gutter-content">
-                    <pre>     </pre>
-                </div>
-            </td>
-            <!--td id="deb-container">
-                <div id="deb" class="gutter-content">
-                    <pre>          </pre>
-                </div>
-            </td-->
-
-            <td id="editor-container">
-                <!--suppress HtmlFormInputWithoutLabel -->
-                <textarea id="editor" rows="1" cols="80" autofocus
-                          autocapitalize="off" autocomplete="off" spellcheck="false"
-                          onresize="console.log('test')"></textarea>
-            </td>
-        </tr>
-    </table>
-    <pre style="margin-left: 2em; font-family: monospace; color: #aaa">
-Line - text line                  BIN - binary machine code
-ADR  - hexadecimal address        HEX - hexadecimal machine code</pre>
-
+	
+	<h2>PROGRAMMING</h2>
+	<hr>
+	
+	<div style="margin-left: 2em;">
+		<table id="flag-table" class="cpu-data-table" style="margin-left: 0; margin-bottom: 0.5em; display: inline-table;">
+            <thead>
+            <tr>
+                <th class="mem-head">ADDR</th>
+                <th class="mem-head">VAL</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+				<td class="data-cell addr"><input type="text" id="load_addr" class="data-cell" onchange="CPU_CONTROLLER.updateLoadAddrPosition();" style="max-width: 3em; font-family: monospace; font-size: 11pt; margin: 0.1em 0;"/></td>
+				<td class="data-cell"><input type="text" id="load_val" class="data-cell" style="max-width: 3em; font-family: monospace; font-size: 11pt; margin: 0.1em 0;"/></td>
+            </tr>
+            </tbody>
+        </table>
+		
+		<button id="button-load" class="button-load" onclick="CPU_CONTROLLER.loadDatum()" style="margin-left: 3em; margin-top: 0.5em;">
+			LOAD
+		</button>
+        <pre style="font-family: monospace; color: #aaa;">
+ADDR - Two Digit Hexadecimal Address to Load to
+VAL  - Two Digit Hexadecimal Datum to be Loaded
+LOAD - Load VAL@ADDR into memory</pre>
+	</div>
+	
     <h2 style="margin-top: 2em">EMULATOR</h2>
     <hr>
 
     <div style="margin-left: 2em">
         <button id="button-reboot" class="button-reboot" onclick="CPU_CONTROLLER.reboot()">REBOOT</button>
         <button id="button-reset" class="button-reset" onclick="CPU_CONTROLLER.reset()">RESET</button>
-        <button id="button-load" class="button-load" onclick="CPU_CONTROLLER.loadProgram()" disabled="disabled">
-            LOAD
-        </button>
-        <button id="button-start" class="button-start" disabled="disabled" onclick="CPU_CONTROLLER.start()">
+        <button id="button-start" class="button-start" onclick="CPU_CONTROLLER.start()">
             START
         </button>
         <button id="button-step" class="button-step" onclick="CPU_CONTROLLER.doCycle()" disabled="disabled">
@@ -728,7 +711,9 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
     Number.prototype.toOctByteString = function () {
         return this.toString(8).toUpperCase().padStart(4, "0")
     };
-
+	
+	
+	
     const int8Buffer = new Int8Array(1);
     Number.prototype.toSignedDecByteString = function () {
         int8Buffer[0] = this;
@@ -741,6 +726,9 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
 </script>
 
 <script id="script-const-and-init">
+	const INPUT_ADDR = document.getElementById("load_addr");
+	const INPUT_VAL = document.getElementById("load_val");
+	
     //const MAIN_CONTAINER = document.getElementById("edit-row");
     const GUTTER = document.getElementById("gutter");
     const HEX = document.getElementById("hex");
@@ -748,7 +736,7 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
     const ADR = document.getElementById("adr");
     const DEB = document.getElementById("deb");
 
-    const EDITOR = document.getElementById("editor");
+    // const EDITOR = document.getElementById("editor");
     const POSITION = document.getElementById("position");
 
     const CELL_REG_L = document.getElementById("reg-l");
@@ -802,18 +790,6 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
 
     const LINE_GUTTER_PAD_SIZE = 2;
 
-
-    function fixGutterHeights() {
-        for (let gutter of GUTTERS_AND_POINTERS) {
-            if (!gutter.enable) continue;
-            let gutterElement = gutter.gutter;
-            gutterElement.style.maxHeight = EDITOR.offsetHeight.toString() + "px";
-            //if (gutter.client)
-        }
-    }
-
-    fixGutterHeights();
-
     const MEM_TABLE_ARRAY = new Array(256);
     {// populate memory table and store references
         let index = 0;
@@ -828,132 +804,6 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
             }
         }
     }
-</script>
-
-<script id="script-editor-behavior">
-    let editorDirty = false;
-
-    String.prototype.lines = function () {
-        return this.split(/\r?\n/);
-    };
-    String.prototype.lineCount = function () {
-        let result = 1;
-        for (let char of this) {
-            if (char === '\n')
-                result++;
-        }
-        return result;
-    };
-    //console.log(EDITOR.offsetHeight);
-    //console.log(GUTTER.style.maxHeight);
-
-    //MAIN_CONTAINER.style.height = EDITOR.height;
-
-    let isSyncingLeftScroll = false;
-    let isSyncingRightScroll = false;
-
-    EDITOR.addEventListener("scroll", () => {
-        if (!isSyncingRightScroll) {
-            isSyncingLeftScroll = true;
-            for (let gutterInfo of GUTTERS_AND_POINTERS) {
-                if (!gutterInfo.enable) continue;
-                gutterInfo.gutter.scrollTop = EDITOR.scrollTop;
-            }
-        }
-        isSyncingRightScroll = false;
-    });
-
-    EDITOR.addEventListener('keydown', () => {
-        setTimeout(() => {
-            if (document.activeElement === EDITOR) {
-                POSITION.removeChild(POSITION.childNodes[0]);
-                POSITION.append("@ " + doGetCaretPosition(EDITOR))
-            }
-        }, 50);
-    });
-
-    function createContainer(tagName, content) {
-        let result = document.createElement(tagName);
-        result.append(content);
-        return result;
-    }
-
-    function updateLineGutter(gutter, linesPtr, targetLines) {
-        for (; linesPtr[0] < targetLines; linesPtr[0]++) {
-            let child = createContainer("pre", (linesPtr[0] + 1).toString().padStart(LINE_GUTTER_PAD_SIZE, "0"));
-            child.className = "line-empty";
-            gutter.append(child);
-        }
-        for (; linesPtr[0] > targetLines; linesPtr[0]--) {
-            gutter.removeChild(gutter.childNodes.item(gutter.childNodes.length - 1));
-        }
-    }
-
-    updateLineGutter(GUTTER, numLinesPtr, 1);
-
-    function updateContentGutter(gutter, linesPtr, targetLines, space) {
-        for (; linesPtr[0] < targetLines; linesPtr[0]++) {
-            let child = createContainer("pre", space);
-            gutter.appendChild(child);
-        }
-        for (; linesPtr[0] > targetLines; linesPtr[0]--) {
-            gutter.removeChild(gutter.childNodes.item(gutter.childNodes.length - 1));
-        }
-    }
-
-    function clearChildren(parent) {
-        while (parent.firstChild) {
-            parent.removeChild(parent.firstChild);
-        }
-    }
-
-    function clearGutters() {
-        let editorLines = EDITOR.value.lineCount();
-
-        for (let obj of GUTTERS_AND_POINTERS) {
-            if (!obj.enable) continue;
-            clearChildren(obj.gutter);
-            obj.pointer[0] = 0;
-        }
-
-        allocateGutterSpace(editorLines);
-    }
-
-    function allocateGutterSpace(targetLineCount) {
-        for (let obj of GUTTERS_AND_POINTERS) {
-            if (!obj.enable) continue;
-            if (obj.type === "line")
-                updateLineGutter(GUTTER, numLinesPtr, targetLineCount);
-            if (obj.type === "content")
-                updateContentGutter(obj.gutter, obj.pointer, targetLineCount, obj.space);
-        }
-    }
-
-    EDITOR.addEventListener("input", (event) => {
-        //console.log(doGetCaretPosition(EDITOR));
-        let editorLines = EDITOR.value.lineCount();
-        editorDirty = true;
-        //console.log(event);
-        // noinspection JSUnresolvedVariable
-        if (event.inputType === undefined || event.inputType !== "insertText" || event.data === null) {
-            allocateGutterSpace(editorLines);
-        }
-    });
-
-    function parseEditor() {
-        if (editorDirty) {
-            editorDirty = false;
-            doParseEditor();
-            if (CPU_CONTROLLER.isStopped()) {
-                if (PROGRAM.length)
-                    BUTTON_LOAD.removeAttribute("disabled");
-                else
-                    BUTTON_LOAD.setAttribute("disabled", "disabled");
-            }
-        }
-    }
-
-    setInterval(parseEditor, 100);
 </script>
 
 <script id="script-emu-behavior">
@@ -1101,8 +951,9 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
             this.cpu = cpu;
         }
 
-        loadProgram() {
-            //console.log("loeading program");
+        loadDatum() {
+			//console.log("loeading program");
+			
             if (!this.cpu.power) {
                 this.cpu.power = true;
                 this.reset();
@@ -1110,15 +961,33 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
             } else if (!this.cpu.stopped) {
                 return;
             }
-            //this.reset();
-            for (let entry of PROGRAM) {
-                this.writeMemory(entry.address, entry.bytes[0], MEM_FLAGS_PROGRAM);
-                if (entry.bytes.length > 1)
-                    this.writeMemory(entry.address + 1, entry.bytes[1], MEM_FLAGS_PROGRAM);
-            }
-            BUTTON_START.removeAttribute("disabled");
+			
+			if (!(/[0-9A-Fa-f]{2}/g.test(INPUT_ADDR.value)) || !(/[0-9A-Fa-f]{2}/g.test(INPUT_VAL.value)))
+			{
+				return;
+			}
+			
+			this.writeMemory(parseInt(INPUT_ADDR.value, 16), parseInt(INPUT_VAL.value, 16), MEM_FLAGS_PROGRAM);
+			
+			INPUT_ADDR.value = ("00" + ((parseInt(INPUT_ADDR.value, 16) + 1) % 0x100).toString(16).toUpperCase()).substr(-2); // Increment ADDR
+			this.updateLoadAddrPosition();
         }
-
+		
+		updateLoadAddrPosition()
+		{
+			for (var i = 0x00; i <= 0xFF; i++)
+			{
+				MEM_TABLE_ARRAY[i].classList.remove("addr");
+			}
+			
+			if (!(/[0-9A-Fa-f]{2}/g.test(INPUT_ADDR.value)))
+			{
+				return;
+			}
+			
+            MEM_TABLE_ARRAY[parseInt(INPUT_ADDR.value, 16)].classList.add("addr");
+		}
+		
         start() {
             //console.log("starting");
             if (!this.cpu.stopped) return;
@@ -1137,8 +1006,7 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
             //console.log("stopping");
             if (this.cpu.stopped) return;
             this.cpu.stopped = true;
-            if (PROGRAM.length)
-                BUTTON_LOAD.removeAttribute("disabled");
+            BUTTON_LOAD.removeAttribute("disabled");
             BUTTON_REBOOT.removeAttribute("disabled");
             BUTTON_RESET.removeAttribute("disabled");
             BUTTON_START.firstChild.replaceWith("START");
@@ -2650,96 +2518,9 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
 
         return name + argstring;
     }
-
-    function doParseEditor() {
-        clearGutters();
-
-        let preprocessed = [];
-        let tokenized = [];
-        let parsed = [];
-        let assembled = [];
-        let labels = {};
-
-        // preprocess pass (remove comments, empty lines, trailing whitespace, capitalize all)
-        let index = 0;
-        for (let line of EDITOR.value.lines()) {
-            let processedLine = preprocessLine(index, line);
-            if (processedLine) {
-                preprocessed.push(processedLine);
-            }
-            index++;
-        }
-
-        // first pass (tokenize, memorize labels)
-        let address = 0;
-        for (let processedLine of preprocessed) {
-            let tokenizedLine = tokenizeLine(processedLine.index, processedLine.line);
-            if (tokenizedLine) {
-                if (tokenizedLine.opcode === INSTR_SET.ORG) {
-                    let parsedLine = parseMnemonic(tokenizedLine, labels);
-                    if (parsedLine) {
-                        address = parsedLine.operands[0];
-                    }
-                    continue;
-                }
-                // give the object an additional address property for later passes
-                tokenizedLine.address = address;
-                if (tokenizedLine.label) {
-                    labels[tokenizedLine.label] = address;
-                }
-                address += tokenizedLine.opcode.bytes;
-                tokenized.push(tokenizedLine);
-            }
-        }
-
-        // second pass
-        for (let mnemonic of tokenized) {
-            let parsedLine = parseMnemonic(mnemonic, labels);
-            if (parsedLine)
-                parsed.push(parsedLine);
-        }
-
-        // third pass
-        for (let parsedLine of parsed) {
-            //console.log(parsedLine)
-            let index = parsedLine.index;
-            let asmBytes = assemble(parsedLine);
-            let address = parsedLine.address;
-            let adr = (address).toHexByteString() + " " +
-                (asmBytes.length === 2 ? (address + 1).toHexByteString() : "  ");
-            let bin = asmBytes[0].toBinByteString() + " " +
-                (asmBytes.length === 2 ? asmBytes[1].toBinByteString() : "        ");
-            let hex = asmBytes[0].toHexByteString() + " " +
-                (asmBytes.length === 2 ? asmBytes[1].toHexByteString() : "  ");
-            assembled.push({index: index, address: address, bytes: asmBytes});
-            //console.log(asmBytes);
-            //continue;
-            ADR.replaceChild(createContainer("pre", adr), ADR.children[index]);
-            BIN.replaceChild(createContainer("pre", bin), BIN.children[index]);
-            HEX.replaceChild(createContainer("pre", hex), HEX.children[index]);
-
-            // for debug purposes, the bytes are decoded and then reassembled
-            {
-                /* let asmBytesAgain = assemble(decode(asmBytes));
-                let deb = asmBytesAgain[0].toString(16).padStart(2, "0") + " " +
-                    (asmBytesAgain.length === 2 ? asmBytesAgain[1].toString(16).padStart(2, "0") : "  "); */
-                let decodedBytes = decode(asmBytes);
-                let mnemonic = "???        ";
-                if (decodedBytes) try {
-                    mnemonic = format(decodedBytes).padEnd(11, " ");
-                } catch (e) {
-                }
-
-                // DEB.replaceChild(createContainer("pre", mnemonic), DEB.children[index]); TODO add if-clause
-            }
-        }
-
-        PROGRAM.length = 0;
-        for (let a of assembled)
-            PROGRAM.push(a);
-    }
 </script>
 
 </body>
 </html>
+
 
