@@ -971,6 +971,7 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
 			
 			INPUT_ADDR.value = ("00" + ((parseInt(INPUT_ADDR.value, 16) + 1) % 0x100).toString(16).toUpperCase()).substr(-2); // Increment ADDR
 			this.updateLoadAddrPosition();
+			document.getElementById("load_val").focus()
         }
 		
 		updateLoadAddrPosition()
