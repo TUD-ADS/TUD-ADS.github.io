@@ -474,9 +474,12 @@
 		</button>
 
         <pre style="font-family: monospace; color: #aaa;">
-ADDR - Two Digit Hexadecimal Address to Load to
-VAL  - Two Digit Hexadecimal Datum to be Loaded
-LOAD - Load VAL@ADDR into memory</pre>
+ADDR            - Two Digit Hexadecimal Address to Load to
+VAL             - Two Digit Hexadecimal Datum to be Loaded
+LOAD TO MEMORY  - Load VAL into memory at ADDR
+
+EXPORT TO CSV   - Exports memory to CSV file.
+IMPORT FROM CSV - Loads CSV file to memory.</pre>
 	</div>
 	
     <h2 style="margin-top: 2em">EMULATOR</h2>
@@ -499,8 +502,8 @@ LOAD - Load VAL@ADDR into memory</pre>
         </span>
         <pre style="font-family: monospace; color: #aaa;">
 REBOOT - wipe memory, registers, etc.              RESET - clear registers & flags
-LOAD   - load program into memory                  START - start the CPU
-STOP   - stop the CPU                              STEP  - perform a single instruction cycle</pre>
+START - start the CPU                              STOP   - stop the CPU                              
+STEP  - perform a single instruction cycle</pre>
 
         <h4 style="margin: 1.5em 0 0.5em">REGISTERS AND FLAGS</h4>
         <table id="flag-table" class="cpu-data-table" style="margin-left: 0; margin-bottom: 0.5em">
@@ -2654,4 +2657,3 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
 
 </body>
 </html>
-
