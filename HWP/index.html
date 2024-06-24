@@ -265,6 +265,14 @@
             border-color: #318ebd;
         }
 
+        .button-export {
+            border-color: #31bd83;
+        }
+
+        .button-import {
+            border-color: #31bd38;
+        }
+
         .button-start {
             border-color: #60bd31;
         }
@@ -447,15 +455,24 @@
             </thead>
             <tbody>
             <tr>
-				<td class="data-cell addr"><input type="text" id="load_addr" class="data-cell" onchange="CPU_CONTROLLER.updateLoadAddrPosition();" style="max-width: 3em; font-family: monospace; font-size: 11pt; margin: 0.1em 0;"/></td>
-				<td class="data-cell"><input type="text" id="load_val" class="data-cell" style="max-width: 3em; font-family: monospace; font-size: 11pt; margin: 0.1em 0;"/></td>
+				<td class="data-cell addr"><input type="text" id="load_addr" class="data-cell" onchange="CPU_CONTROLLER.updateLoadAddrPosition();" maxlength="2" style="max-width: 3em; font-family: monospace; font-size: 11pt; margin: 0.1em 0;"/></td>
+				<td class="data-cell"><input type="text" id="load_val" class="data-cell" maxlength="2" style="max-width: 3em; font-family: monospace; font-size: 11pt; margin: 0.1em 0;"/></td>
             </tr>
             </tbody>
         </table>
 		
 		<button id="button-load" class="button-load" onclick="CPU_CONTROLLER.loadDatum()" style="margin-left: 3em; margin-top: 0.5em;">
-			LOAD
+			LOAD TO MEMORY
 		</button>
+
+		<button id="button-export" class="button-export" onclick="CPU_CONTROLLER.writeCsv()" style="margin-left: 3em; margin-top: 0.5em;">
+			EXPORT TO CSV
+		</button>
+
+		<button id="button-import" class="button-import" onclick="CPU_CONTROLLER.loadCsv()" style="margin-left: 3em; margin-top: 0.5em;">
+			IMPORT FROM CSV
+		</button>
+
         <pre style="font-family: monospace; color: #aaa;">
 ADDR - Two Digit Hexadecimal Address to Load to
 VAL  - Two Digit Hexadecimal Datum to be Loaded
@@ -751,6 +768,8 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
     const CELL_ERRLOG = document.getElementById("errlog");
 
     const BUTTON_LOAD = document.getElementById("button-load");
+    const BUTTON_EXPORT = document.getElementById("button-export");
+    const BUTTON_IMPORT = document.getElementById("button-import");
     const BUTTON_START = document.getElementById("button-start");
     const BUTTON_REBOOT = document.getElementById("button-reboot");
     const BUTTON_RESET = document.getElementById("button-reset");
@@ -776,6 +795,8 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
     let adrLinesPtr = [1];
     let debLinesPtr = [1];
 
+    let mem_input_bu;
+
     const SPACE_05 = " ".repeat(5);
     const SPACE_17 = " ".repeat(17);
     const SPACE_10 = " ".repeat(10);
@@ -798,11 +819,38 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
                 let cell = document.createElement("td");
                 cell.id = "_mem" + index.toHexByteString();
                 cell.className = "mem-cell";
-                //cell.append("00");
+                let cell_input = createMemoryInputBox(index);
+                cell.appendChild(cell_input)
                 row.appendChild(cell);
                 MEM_TABLE_ARRAY[index] = cell;
             }
         }
+    }
+
+    function createMemoryInputBox(index) {
+        let mem_input = document.createElement("input");
+        mem_input.className = "data-cell";
+        mem_input.maxLength = "2";
+        mem_input.style = "max-width: 3em; font-family: monospace; font-size: 11pt; margin: 0.1em 0;";
+        mem_input.addEventListener("focusin", (event) => {
+            mem_input_bu = mem_input.value;
+        });
+        mem_input.addEventListener("focusout", (event) => {
+            new_val = mem_input.value;
+            if((/[0-9A-Fa-f]{1}/g.test(new_val)) && new_val.length == 1) {
+                new_val = "0" + new_val;
+            }
+            if(!(/[0-9A-Fa-f]{2}/g.test(new_val)) || new_val.length > 2) {
+                if(new_val != ""){
+                    writeToCell(CELL_ERRLOG, "Did not update memory cell! Input invalid: [" + index.toString(16).toUpperCase() + "] = " + new_val);
+                    CELL_ERRLOG.style.backgroundColor = "#663d3d";
+                }
+                mem_input.value = mem_input_bu;
+                return;
+            }
+            CPU_CONTROLLER.writeMemory(index, parseInt(new_val, 16), MEM_FLAGS_PROGRAM)
+        });
+        return mem_input;
     }
 </script>
 
@@ -900,6 +948,24 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
             }
         });
     }
+
+    {
+        INPUT_VAL.addEventListener('keypress', (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                BUTTON_LOAD.click()
+            }
+        });
+    }
+
+    {
+        INPUT_ADDR.addEventListener('keypress', (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                BUTTON_LOAD.click()
+            }
+        });
+    }
 </script>
 
 <script async="async">
@@ -961,9 +1027,14 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
             } else if (!this.cpu.stopped) {
                 return;
             }
-			
-			if (!(/[0-9A-Fa-f]{2}/g.test(INPUT_ADDR.value)) || !(/[0-9A-Fa-f]{2}/g.test(INPUT_VAL.value)))
+            INPUT_VAL.value = INPUT_VAL.value.toUpperCase();
+			if((/[0-9A-Fa-f]{1}/g.test(INPUT_VAL.value)) && INPUT_VAL.value.length == 1) {
+                INPUT_VAL.value = "0" + INPUT_VAL.value;
+            }
+			if (!(/[0-9A-Fa-f]{2}/g.test(INPUT_ADDR.value)) || !(/[0-9A-Fa-f]{2}/g.test(INPUT_VAL.value)) || INPUT_VAL.value.length > 2 || INPUT_ADDR.value.length > 2)
 			{
+                writeToCell(CELL_ERRLOG, "Did not update memory cell! Input invalid: [" + INPUT_ADDR.value.toString(16).toUpperCase() + "] = " + INPUT_VAL.value);
+                CELL_ERRLOG.style.backgroundColor = "#663d3d";
 				return;
 			}
 			
@@ -971,6 +1042,8 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
 			
 			INPUT_ADDR.value = ("00" + ((parseInt(INPUT_ADDR.value, 16) + 1) % 0x100).toString(16).toUpperCase()).substr(-2); // Increment ADDR
 			this.updateLoadAddrPosition();
+			document.getElementById("load_val").focus()
+			document.getElementById("load_val").select()
         }
 		
 		updateLoadAddrPosition()
@@ -979,8 +1052,10 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
 			{
 				MEM_TABLE_ARRAY[i].classList.remove("addr");
 			}
-			
-			if (!(/[0-9A-Fa-f]{2}/g.test(INPUT_ADDR.value)))
+			if((/[0-9A-Fa-f]{1}/g.test(INPUT_ADDR.value)) && INPUT_ADDR.value.length == 1) {
+                INPUT_ADDR.value = "0" + INPUT_ADDR.value;
+            }
+			if (!(/[0-9A-Fa-f]{2}/g.test(INPUT_ADDR.value)) || INPUT_ADDR.value.length > 2)
 			{
 				return;
 			}
@@ -1296,10 +1371,13 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
             this.cpu.memFlags[address] = flags;
 
             let cell = MEM_TABLE_ARRAY[address];
+            
             if (cell.firstChild)
-                cell.firstChild.remove();
+               cell.firstChild.remove()
+               let mem_input = createMemoryInputBox(address);
+               cell.appendChild(mem_input)
             if (flags & MEM_FLAG_WRITTEN)
-                cell.append(byte.toHexByteString());
+                cell.firstChild.value = byte.toHexByteString()
 
             cell.classList.remove("mem-cell-stack");
             cell.classList.remove("mem-cell-heap");
@@ -1335,6 +1413,59 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
             this.writeRegisterPair(RP_8080.SP, (this.cpu.sp + 1) & 0xFF);
             return result;
         }
+
+        loadCsv() {
+            const tmp_input = document.createElement("input");
+            tmp_input.type = "file";
+            tmp_input.addEventListener("change", (event) => { 
+                const file = event.target.files[0]; 
+                const reader = new FileReader(); 
+                reader.onload = (e) => { 
+                    const content = e.target.result; 
+                    const file_mem = content.split(',');
+                    this.reboot();
+                    for (let i = 0; i < this.cpu.mem.length; i++) {
+                        let val = file_mem[i];
+                        if ((/[0-9A-Fa-f]{1}/g.test(val)) && val.length == 1) {
+                            val = "0" + val;
+                        }
+                        if (val != "" && (!(/[0-9A-Fa-f]{2}/g.test(val)) || val.length > 2))
+                        {
+                            writeToCell(CELL_ERRLOG, "Stopped reading file! Invalid Value in file! [" + i.toString(16).toUpperCase() + "] = " + val );
+                            CELL_ERRLOG.style.backgroundColor = "#663d3d";
+                            return;
+                        }
+                        if (val != ""){
+                            this.writeMemory(i, parseInt(val, 16), MEM_FLAGS_PROGRAM);
+                        }
+                    }
+                };
+                reader.readAsText(file); 
+            });
+            tmp_input.click();
+            document.body.removeChild(tmp_input); 
+        }
+
+        writeCsv() {
+            let res = "";
+            for (var i = 0x00; i < 0xFF; i++)
+			{
+				res += MEM_TABLE_ARRAY[i].firstChild.value + ",";
+			}
+            res += MEM_TABLE_ARRAY[0xFF].firstChild.value;
+
+            const blob = new Blob([res], { type: "text/csv;charset=utf-8," });
+            const obj_url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = obj_url; 
+            link.download = "i8080_sim_export.csv"; 
+            document.body.appendChild(link); 
+            link.click(); 
+            document.body.removeChild(link); 
+            window.URL.revokeObjectURL(obj_url); 
+        }
+
+
 
     }
 
@@ -2518,9 +2649,9 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
 
         return name + argstring;
     }
+
 </script>
 
 </body>
 </html>
-
 
