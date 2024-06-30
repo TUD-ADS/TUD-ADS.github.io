@@ -1429,6 +1429,7 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
                     this.reboot();
                     for (let i = 0; i < this.cpu.mem.length; i++) {
                         let val = file_mem[i];
+                        val = val.replace(/(\r\n|\n|\r)/gm,"");
                         if ((/[0-9A-Fa-f]{1}/g.test(val)) && val.length == 1) {
                             val = "0" + val;
                         }
@@ -2657,3 +2658,5 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
 
 </body>
 </html>
+
+
