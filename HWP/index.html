@@ -761,7 +761,6 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
 </script>
 
 <script id="script-const-and-init">
-    const ACCU_REG = document.getElementById("reg-a");
 	const INPUT_ADDR = document.getElementById("load_addr");
 	const INPUT_VAL = document.getElementById("load_val");
 	
@@ -847,15 +846,15 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
     }
 
     // Add event listener to accumulator cell
-    ACCU_REG.value = "";
+    CELL_REG_A.value = "";
     {
         let accu_reg_bu = "";
         const err_bg = CELL_ERRLOG.style.backgroundColor.value;
-        ACCU_REG.addEventListener("focusin", (event) => {
-            accu_reg_bu = ACCU_REG.value;
+        CELL_REG_A.addEventListener("focusin", (event) => {
+            accu_reg_bu = CELL_REG_A.value;
         });
-        ACCU_REG.addEventListener("focusout", (event) => {
-            new_val = ACCU_REG.value;
+        CELL_REG_A.addEventListener("focusout", (event) => {
+            new_val = CELL_REG_A.value;
             if((/[0-9A-Fa-f]{1}/g.test(new_val)) && new_val.length == 1) {
                 new_val = "0" + new_val;
             }
@@ -864,10 +863,9 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
                     writeToCell(CELL_ERRLOG, "Did not update accumulator register! Input invalid: " + new_val);
                     CELL_ERRLOG.style.backgroundColor = "#663d3d";
                 }
-                ACCU_REG.value = accu_reg_bu;
+                CPU_CONTROLLER.writeRegister(REG_8080.A, Number("0x" + accu_reg_bu));
             }else{
-                ACCU_REG.value = new_val;
-                CPU_CONTROLLER.writeRegister(REG_8080.A, Number("0x" + new_val.toUpperCase()));
+                CPU_CONTROLLER.writeRegister(REG_8080.A, Number("0x" + new_val));
             }
         });
     }
@@ -1305,8 +1303,10 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
             this.cpu.regWritten[reg] = 1;
             if (reg === REG_8080.L)
                 writeToCell(CELL_REG_L, byte.toHexByteString());
-            else if (reg === REG_8080.A)
-                writeToCell(CELL_REG_A, byte.toHexByteString());
+            else if (reg === REG_8080.A){
+                CELL_REG_A.value = byte.toHexByteString();
+                //writeToCell(CELL_REG_A, byte.toHexByteString());
+            }
             else throw 'writeToArbitraryRegister';
         }
 
@@ -2701,5 +2701,4 @@ H - highest 4 bits of address (rows)        L - lowest 4 bits of address (column
 
 </body>
 </html>
-
 
